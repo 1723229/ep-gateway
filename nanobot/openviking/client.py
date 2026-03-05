@@ -38,6 +38,7 @@ class VikingClient:
         embedding_model: str = "",
         embedding_api_key: str = "",
         embedding_base_url: str = "",
+        embedding_dimension: int = 1024,
     ):
         if not HAS_OPENVIKING:
             raise RuntimeError("openviking package is not installed. Install with: pip install openviking")
@@ -55,6 +56,7 @@ class VikingClient:
                 embedding_model=embedding_model,
                 embedding_api_key=embedding_api_key,
                 embedding_base_url=embedding_base_url,
+                embedding_dimension=embedding_dimension,
                 vlm_api_key=vlm_api_key,
                 vlm_base_url=vlm_base_url,
                 vlm_model=vlm_model,
@@ -79,6 +81,7 @@ class VikingClient:
         embedding_model: str,
         embedding_api_key: str,
         embedding_base_url: str,
+        embedding_dimension: int,
         vlm_api_key: str,
         vlm_base_url: str,
         vlm_model: str,
@@ -115,6 +118,8 @@ class VikingClient:
                     "model": embedding_model,
                     "api_key": embedding_api_key,
                     "api_base": embedding_base_url,
+                    "dimension": embedding_dimension,
+                    "batch_size": 32,
                 }
             }
 
@@ -148,6 +153,7 @@ class VikingClient:
         embedding_model: str = "",
         embedding_api_key: str = "",
         embedding_base_url: str = "",
+        embedding_dimension: int = 1024,
     ) -> "VikingClient":
         """Factory: create and initialise a VikingClient."""
         instance = cls(
@@ -163,6 +169,7 @@ class VikingClient:
             embedding_model=embedding_model,
             embedding_api_key=embedding_api_key,
             embedding_base_url=embedding_base_url,
+            embedding_dimension=embedding_dimension,
         )
         await instance._initialize()
         return instance
@@ -186,6 +193,7 @@ class VikingClient:
             embedding_model=cfg.embedding_model,
             embedding_api_key=cfg.embedding_api_key,
             embedding_base_url=cfg.embedding_base_url,
+            embedding_dimension=cfg.embedding_dimension,
         )
 
     # ------------------------------------------------------------------
@@ -279,7 +287,7 @@ class VikingClient:
 
                 parts: list[Part] = []
                 if content:
-                    parts.append(TextPart(text=content))
+                    parts.append(TextPart(text=self._normalize_content(content)))
 
                 for tool_info in tools_used:
                     tool_name = tool_info.get("tool_name", "")
@@ -318,13 +326,17 @@ class VikingClient:
                     )
 
                 if not parts:
-                    parts = [TextPart(text=content or "")]
+                    parts = [TextPart(text=self._normalize_content(content) if content else "")]
                 session.add_message(role=role, parts=parts)
 
             result = session.commit()
         else:
             for message in messages:
-                await session.add_message(role=message.get("role"), content=message.get("content"))
+                raw = message.get("content")
+                await session.add_message(
+                    role=message.get("role"),
+                    content=self._normalize_content(raw) if raw else "",
+                )
             result = await session.commit()
 
         logger.debug("Committed {} messages to OpenViking session {}", len(messages), session_id)
@@ -360,6 +372,29 @@ class VikingClient:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_content(content: Any) -> str:
+        """Flatten multimodal content lists into a plain string.
+
+        LLM messages may carry ``content`` as a list of dicts
+        (e.g. ``[{"type": "text", "text": "..."}, {"type": "image_url", ...}]``)
+        when images are involved.  OpenViking's ``TextPart`` expects a plain
+        string, so we extract and join all text segments here.
+        """
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            texts: list[str] = []
+            for part in content:
+                if isinstance(part, dict):
+                    t = part.get("text") or part.get("content") or ""
+                    if isinstance(t, str) and t:
+                        texts.append(t)
+                elif isinstance(part, str):
+                    texts.append(part)
+            return "\n".join(texts) if texts else str(content)
+        return str(content)
 
     @staticmethod
     def _matched_to_dict(ctx: Any) -> dict[str, Any]:

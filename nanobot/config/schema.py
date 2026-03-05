@@ -215,6 +215,7 @@ class OpenVikingConfig(Base):
     embedding_model: str = ""
     embedding_api_key: str = ""
     embedding_base_url: str = ""
+    embedding_dimension: int = 1024
 
 
 class WebConfig(BaseModel):
