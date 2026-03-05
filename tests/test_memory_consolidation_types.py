@@ -62,8 +62,9 @@ class TestMemoryConsolidationTypeHandling:
         result = await store.consolidate(session, provider, "test-model", memory_window=50)
 
         assert result is True
-        assert store.history_file.exists()
-        assert "[2026-01-01] User discussed testing." in store.history_file.read_text()
+        daily = store.history_dir / "2026-01-01.md"
+        assert daily.exists()
+        assert "[2026-01-01] User discussed testing." in daily.read_text()
         assert "User likes testing." in store.memory_file.read_text()
 
     @pytest.mark.asyncio
@@ -82,8 +83,8 @@ class TestMemoryConsolidationTypeHandling:
         result = await store.consolidate(session, provider, "test-model", memory_window=50)
 
         assert result is True
-        assert store.history_file.exists()
-        history_content = store.history_file.read_text()
+        history_content = store.read_history()
+        assert len(history_content.strip()) > 0
         parsed = json.loads(history_content.strip())
         assert parsed["summary"] == "User discussed testing."
 
@@ -117,7 +118,7 @@ class TestMemoryConsolidationTypeHandling:
         result = await store.consolidate(session, provider, "test-model", memory_window=50)
 
         assert result is True
-        assert "User discussed testing." in store.history_file.read_text()
+        assert "User discussed testing." in store.read_history()
 
     @pytest.mark.asyncio
     async def test_no_tool_call_returns_false(self, tmp_path: Path) -> None:
@@ -132,7 +133,7 @@ class TestMemoryConsolidationTypeHandling:
         result = await store.consolidate(session, provider, "test-model", memory_window=50)
 
         assert result is False
-        assert not store.history_file.exists()
+        assert store.list_history_files() == []
 
     @pytest.mark.asyncio
     async def test_skips_when_few_messages(self, tmp_path: Path) -> None:

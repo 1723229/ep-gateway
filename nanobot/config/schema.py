@@ -252,6 +252,8 @@ class AgentDefaults(Base):
     temperature: float = 0.1
     max_tool_iterations: int = 40
     memory_window: int = 100
+    history_retention_days: int = 90  # Daily history files older than this are pruned; 0 = keep forever
+    history_auto_cleanup: bool = True  # Prune expired history files during consolidation
     reasoning_effort: str | None = None  # low / medium / high — enables LLM thinking mode
 
 
@@ -298,12 +300,38 @@ class HeartbeatConfig(Base):
     interval_s: int = 30 * 60  # 30 minutes
 
 
+class CronRetryConfig(Base):
+    """Retry policy for cron jobs."""
+
+    max_attempts: int = 3
+    backoff_ms: list[int] = Field(default_factory=lambda: [30_000, 60_000, 300_000, 900_000, 3_600_000])
+    retry_on: list[str] = Field(default_factory=lambda: ["rate_limit", "network", "server_error"])
+
+
+class CronRunLogConfig(Base):
+    """Run log retention for cron jobs."""
+
+    max_bytes: int = 2_000_000
+    keep_lines: int = 2000
+
+
+class CronConfig(Base):
+    """Cron scheduler configuration."""
+
+    enabled: bool = True
+    max_concurrent_runs: int = 1
+    retry: CronRetryConfig = Field(default_factory=CronRetryConfig)
+    session_retention: str = "24h"
+    run_log: CronRunLogConfig = Field(default_factory=CronRunLogConfig)
+
+
 class GatewayConfig(Base):
     """Gateway/server configuration."""
 
     host: str = "0.0.0.0"
     port: int = 18790
     heartbeat: HeartbeatConfig = Field(default_factory=HeartbeatConfig)
+    cron: CronConfig = Field(default_factory=CronConfig)
 
 
 class WebSearchConfig(Base):

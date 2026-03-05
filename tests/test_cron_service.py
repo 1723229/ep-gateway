@@ -43,17 +43,20 @@ async def test_running_service_honors_external_disable(tmp_path) -> None:
     service = CronService(store_path, on_job=on_job)
     job = service.add_job(
         name="external-disable",
-        schedule=CronSchedule(kind="every", every_ms=200),
+        schedule=CronSchedule(kind="every", every_ms=2000),
         message="hello",
     )
     await service.start()
     try:
+        # Wait briefly so the file mtime from start() settles (Windows has ~1s mtime resolution)
+        await asyncio.sleep(1.1)
+
         external = CronService(store_path)
         updated = external.enable_job(job.id, enabled=False)
         assert updated is not None
         assert updated.enabled is False
 
-        await asyncio.sleep(0.35)
+        await asyncio.sleep(1.5)
         assert called == []
     finally:
         service.stop()
