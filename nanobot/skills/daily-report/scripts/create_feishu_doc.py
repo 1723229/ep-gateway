@@ -4,7 +4,7 @@
 早晚报飞书文档生成器
 使用 feishu-doc-orchestrator 技能将MD转换为完整格式的飞书文档
 
-配置文件: ~/.openclaw/.env (统一配置)
+配置文件: ~/.nanobot/.env (统一配置)
 
 用法:
     python create_feishu_doc.py <md_file> <title>
@@ -28,7 +28,7 @@ def load_config():
     # 首先尝试新的 JSON 配置路径
     json_config_paths = [
         Path(__file__).parent.parent.parent.parent / "config" / "feishu.json",
-        Path.home() / '.openclaw' / 'workspace' / 'config' / 'feishu.json',
+        Path.home() / '.nanobot' / 'workspace' / 'config' / 'feishu.json',
     ]
     
     for json_path in json_config_paths:
@@ -57,7 +57,7 @@ def load_config():
                     config['FEISHU_DEFAULT_FOLDER'] = json_config['drive']['defaultFolder']
                     config['FEISHU_DRIVE_FOLDER_TOKEN'] = json_config['drive']['defaultFolder']
                 # 从 .env 补充敏感信息
-                env_path = Path.home() / '.openclaw' / '.env'
+                env_path = Path.home() / '.nanobot' / '.env'
                 if env_path.exists():
                     with open(env_path, 'r', encoding='utf-8') as f:
                         for line in f:
@@ -72,7 +72,7 @@ def load_config():
     
     # 回退到旧的 .env 配置
     config_paths = [
-        Path.home() / '.openclaw' / '.env',
+        Path.home() / '.nanobot' / '.env',
         Path.home() / '.claude' / 'feishu-config.env',
     ]
     

@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # 添加路径
-sys.path.insert(0, '/Users/delta/.openclaw/workspace/01-Projects/group-management/src')
-sys.path.insert(0, '/Users/delta/.openclaw/workspace/skills/feishu-chat-extractor')
+sys.path.insert(0, '~/.nanobot/workspace/01-Projects/group-management/src')
+sys.path.insert(0, '~/.nanobot/workspace/skills/feishu-chat-extractor')
 
 from group_memory import GroupChatMemory, Message
 
@@ -31,7 +31,7 @@ CHAT_IDS = {
 }
 
 KEYWORDS = ["吴畏", "吴老师", "非凡产研"]
-SOCIAL_RELATIONS_FILE = "/Users/delta/.openclaw/workspace/memory/social_relations.json"
+SOCIAL_RELATIONS_FILE = "~/.nanobot/workspace/memory/social_relations.json"
 
 class GroupMonitorWithIntimacy:
     """群聊监控与亲密度更新整合类"""
@@ -47,7 +47,7 @@ class GroupMonitorWithIntimacy:
         from pathlib import Path
         
         # 从 .env 文件读取配置
-        env_path = Path.home() / '.openclaw' / '.env'
+        env_path = Path.home() / '.nanobot' / '.env'
         env_config = {}
         if env_path.exists():
             with open(env_path, 'r', encoding='utf-8') as f:

@@ -17,7 +17,7 @@ import requests
 def load_config():
     """加载飞书配置（优先统一配置）"""
     # 优先尝试新的统一配置路径
-    config_path = Path.home() / '.openclaw' / '.env'
+    config_path = Path.home() / '.nanobot' / '.env'
     if not config_path.exists():
         # 兼容旧路径
         config_path = Path(__file__).parent.parent.parent.parent / "feishu-config.env"

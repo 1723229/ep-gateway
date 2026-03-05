@@ -50,7 +50,7 @@ def generate_daily_report(
     news_data: List[Dict],
     deep_topic: str = "",
     feishu_url: str = "",
-    output_dir: str = "/Users/delta/.openclaw/workspace"
+    output_dir: str = "~/.nanobot/workspace"
 ) -> Dict:
     """
     生成 V5 格式早晚报

@@ -4,7 +4,7 @@
 """
 
 import sys
-sys.path.insert(0, '/Users/delta/.openclaw/workspace/skills/feishu-group-welcome/scripts')
+sys.path.insert(0, '~/.nanobot/workspace/skills/feishu-group-welcome/scripts')
 
 from welcome_bot import GroupWelcomeBot
 

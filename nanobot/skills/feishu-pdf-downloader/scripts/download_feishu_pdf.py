@@ -34,8 +34,8 @@ def download_file(file_token, output_path, tenant_token=None):
     """Download file from Feishu drive"""
     # Load credentials if token not provided
     if not tenant_token:
-        load_env_file(os.path.expanduser('~/.openclaw/.env'))
-        load_env_file(os.path.expanduser('~/.openclaw/config/main.env'))
+        load_env_file(os.path.expanduser('~/.nanobot/.env'))
+        load_env_file(os.path.expanduser('~/.nanobot/config/main.env'))
         
         app_id = os.getenv("FEISHU_APP_ID")
         app_secret = os.getenv("FEISHU_APP_SECRET")

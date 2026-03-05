@@ -20,7 +20,7 @@ from pathlib import Path
 
 # 从 .env 文件读取配置
 def load_env_config():
-    env_path = Path.home() / '.openclaw' / '.env'
+    env_path = Path.home() / '.nanobot' / '.env'
     config = {}
     if env_path.exists():
         with open(env_path, 'r', encoding='utf-8') as f:

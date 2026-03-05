@@ -17,7 +17,7 @@ def load_config():
     # 首先尝试新的 JSON 配置路径
     json_config_paths = [
         Path(__file__).parent.parent.parent / "config" / "feishu.json",
-        Path.home() / '.openclaw' / 'workspace' / 'config' / 'feishu.json',
+        Path.home() / '.nanobot' / 'workspace' / 'config' / 'feishu.json',
     ]
     
     for json_path in json_config_paths:
@@ -46,7 +46,7 @@ def load_config():
                     config['FEISHU_DEFAULT_FOLDER'] = json_config['drive']['defaultFolder']
                     config['FEISHU_DRIVE_FOLDER_TOKEN'] = json_config['drive']['defaultFolder']
                 # 从 .env 补充敏感信息
-                env_path = Path.home() / '.openclaw' / '.env'
+                env_path = Path.home() / '.nanobot' / '.env'
                 if env_path.exists():
                     with open(env_path, 'r', encoding='utf-8') as f:
                         for line in f:

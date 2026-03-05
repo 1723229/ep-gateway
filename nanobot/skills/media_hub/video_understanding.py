@@ -28,7 +28,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 # 添加项目路径
-sys.path.insert(0, '/Users/delta/.openclaw/workspace')
+sys.path.insert(0, '~/.nanobot/workspace')
 
 class VideoUnderstandingSkill:
     """音视频理解技能 - 统一入口"""
@@ -38,12 +38,12 @@ class VideoUnderstandingSkill:
     AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.wma'}
     
     def __init__(self, temp_dir: str = None):
-        self.workspace = Path('/Users/delta/.openclaw/workspace')
+        self.workspace = Path('~/.nanobot/workspace')
         self.temp_dir = Path(temp_dir) if temp_dir else self.workspace / 'temp' / 'video_processing'
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         
         # 从 .env 文件读取配置
-        env_path = Path.home() / '.openclaw' / '.env'
+        env_path = Path.home() / '.nanobot' / '.env'
         env_config = {}
         if env_path.exists():
             with open(env_path, 'r', encoding='utf-8') as f:

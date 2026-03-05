@@ -140,7 +140,8 @@ def _extract_element_content(element: dict) -> list[str]:
 
     elif tag == "img":
         alt = element.get("alt", {})
-        parts.append(alt.get("content", "[image]") if isinstance(alt, dict) else "[image]")
+        alt_text = alt.get("content", "") if isinstance(alt, dict) else ""
+        parts.append(alt_text or "[icon]")
 
     elif tag == "note":
         for ne in element.get("elements", []):
@@ -782,18 +783,51 @@ class FeishuChannel(BaseChannel):
 
             # Fetch quoted message content when replying/quoting
             quote_text = ""
+            quote_media: list[str] = []
             if message.parent_id:
                 loop = asyncio.get_running_loop()
                 parent_data = await loop.run_in_executor(
                     None, self._get_message_sync, message.parent_id
                 )
                 if parent_data:
-                    raw = self._extract_message_text(
-                        parent_data["msg_type"], parent_data["content"]
-                    )
-                    if raw:
-                        quoted_lines = "\n".join(f"> {line}" for line in raw.splitlines())
-                        quote_text = quoted_lines + "\n"
+                    p_type = parent_data["msg_type"]
+                    p_content_str = parent_data["content"]
+
+                    try:
+                        p_json = json.loads(p_content_str)
+                    except (json.JSONDecodeError, TypeError):
+                        p_json = {}
+
+                    if p_type == "image":
+                        fp, _ = await self._download_and_save_media(
+                            "image", p_json, message.parent_id
+                        )
+                        if fp:
+                            quote_media.append(fp)
+                        quote_text = "> [quoted image]\n"
+                    elif p_type == "sticker":
+                        quote_text = "> [quoted sticker/emoji]\n"
+                    elif p_type == "post":
+                        text, img_keys = _extract_post_content(p_json)
+                        for img_key in img_keys:
+                            fp, _ = await self._download_and_save_media(
+                                "image", {"image_key": img_key}, message.parent_id
+                            )
+                            if fp:
+                                quote_media.append(fp)
+                        raw = text or ""
+                        if raw:
+                            quoted_lines = "\n".join(
+                                f"> {line}" for line in raw.splitlines()
+                            )
+                            quote_text = quoted_lines + "\n"
+                    else:
+                        raw = self._extract_message_text(p_type, p_content_str)
+                        if raw:
+                            quoted_lines = "\n".join(
+                                f"> {line}" for line in raw.splitlines()
+                            )
+                            quote_text = quoted_lines + "\n"
 
             # Parse content
             content_parts = []
@@ -844,9 +878,11 @@ class FeishuChannel(BaseChannel):
                 for key, display in mention_map.items():
                     content = content.replace(key, display)
 
-            # Prepend quoted message
+            # Prepend quoted message and merge quoted media
             if quote_text:
                 content = quote_text + content
+            if quote_media:
+                media_paths = quote_media + media_paths
 
             if not content and not media_paths:
                 return

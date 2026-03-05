@@ -15,7 +15,7 @@ import os
 def get_credentials():
     """Get Feishu API credentials"""
     # Try to read from config file
-    config_path = os.path.expanduser("~/.openclaw/agents/main/agent/feishu-app-token.txt")
+    config_path = os.path.expanduser("~/.nanobot/agents/main/agent/feishu-app-token.txt")
     if os.path.exists(config_path):
         with open(config_path, 'r') as f:
             token = f.read().strip()

@@ -24,9 +24,9 @@ def load_config():
     """加载飞书配置"""
     # 尝试多个路径（优先新的统一配置）
     possible_paths = [
-        Path.home() / '.openclaw' / '.env',  # 新的统一配置
+        Path.home() / '.nanobot' / '.env',  # 新的统一配置
         Path(__file__).parent.parent.parent.parent / "feishu-config.env",
-        Path("/Users/delta/.openclaw/workspace/skills/feishu-doc-orchestrator/feishu-config.env"),
+        Path("~/.nanobot/workspace/skills/feishu-doc-orchestrator/feishu-config.env"),
         Path(".claude/feishu-config.env"),
         Path("../feishu-config.env"),
         Path("../../feishu-config.env"),

@@ -13,13 +13,13 @@ import tempfile
 from pathlib import Path
 
 # 配置路径 - 小爪专属配置
-CONFIG_PATH = Path.home() / '.openclaw' / '.env'
+CONFIG_PATH = Path.home() / '.nanobot' / '.env'
 
 
 def load_config():
     """
     加载小爪的飞书配置
-    从 ~/.openclaw/.env 读取
+    从 ~/.nanobot/.env 读取
     """
     config = {}
     
@@ -42,7 +42,7 @@ def get_token(config):
     app_secret = config.get('FEISHU_APP_SECRET')
     
     if not app_id or not app_secret:
-        raise Exception("缺少飞书配置，请检查 ~/.openclaw/config/main.env")
+        raise Exception("缺少飞书配置，请检查 ~/.nanobot/config/main.env")
     
     url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
     resp = requests.post(url, json={"app_id": app_id, "app_secret": app_secret})

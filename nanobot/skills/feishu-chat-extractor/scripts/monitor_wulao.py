@@ -16,7 +16,7 @@ CHAT_IDS = [
 ]
 KEYWORDS = ["吴畏", "吴老师", "非凡产研"]
 OUTPUT_DIR = "/tmp/monitor_reports"
-SKILL_DIR = "/Users/delta/.openclaw/workspace/skills/feishu-chat-extractor"
+SKILL_DIR = "~/.nanobot/workspace/skills/feishu-chat-extractor"
 
 def run_extraction(chat_id, output_file, hours=24):
     """提取群聊消息"""

@@ -53,7 +53,7 @@ welcome_bot.check_and_welcome(chat_id, config)
 crontab -e
 
 # 添加定时任务
-*/30 * * * * cd /Users/delta/.openclaw/workspace && python3 skills/feishu-group-welcome/scripts/welcome_bot.py --chat-id oc_xxx
+*/30 * * * * cd ~/.nanobot/workspace && python3 skills/feishu-group-welcome/scripts/welcome_bot.py --chat-id oc_xxx
 ```
 
 ## 配置说明

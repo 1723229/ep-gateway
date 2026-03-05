@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # 添加路径
-sys.path.insert(0, '/Users/delta/.openclaw/workspace/01-Projects/group-management/src')
-sys.path.insert(0, '/Users/delta/.openclaw/workspace/skills/feishu-chat-extractor')
+sys.path.insert(0, '~/.nanobot/workspace/01-Projects/group-management/src')
+sys.path.insert(0, '~/.nanobot/workspace/skills/feishu-chat-extractor')
 
 from group_memory import GroupChatMemory, Message
 
@@ -28,7 +28,7 @@ from group_memory import GroupChatMemory, Message
 CHAT_ID = "oc_3cc1c4abbc093b180cb0b75e40bb6e1b"
 CHAT_NAME = "外部群-AJ"
 KEYWORDS = ["OpenClaw", "Clawdbot", "Clawd", "龙虾", "clawd", "openclaw"]
-OUTPUT_DIR = "/Users/delta/.openclaw/workspace/01-Projects/group-management/data/group-chats"
+OUTPUT_DIR = "~/.nanobot/workspace/01-Projects/group-management/data/group-chats"
 
 class ExternalGroupMonitor:
     """外部群监控类"""
@@ -43,7 +43,7 @@ class ExternalGroupMonitor:
         from pathlib import Path
         
         # 从 .env 文件读取配置
-        env_path = Path.home() / '.openclaw' / '.env'
+        env_path = Path.home() / '.nanobot' / '.env'
         env_config = {}
         if env_path.exists():
             with open(env_path, 'r', encoding='utf-8') as f:

@@ -14,7 +14,7 @@
 
 ### 错误 1：反引号转义问题
 ```
-/root/.openclaw/workspace/skills/security-hardening/install.js:875
+/root/.nanobot/workspace/skills/security-hardening/install.js:875
   log(\`Workspace: \${config.workspace}\`, 'blue');
       ^
 
@@ -33,7 +33,7 @@ sed -i 's/\\\${/${/g' skills/security-hardening/install.js
 
 ### 错误 2：嵌套模板字符串（核心问题）
 ```
-/root/.openclaw/workspace/skills/security-hardening/install.js:419
+/root/.nanobot/workspace/skills/security-hardening/install.js:419
 不可覆盖的安全规则（系统级）
          
 
@@ -61,7 +61,7 @@ function generatePersistentGuardJs() {
 
 ### 步骤 1：修复转义字符
 ```bash
-cd /root/.openclaw/workspace
+cd /root/.nanobot/workspace
 sed -i 's/\\`/`/g' skills/security-hardening/install.js
 sed -i 's/\\\${/${/g' skills/security-hardening/install.js
 ```
@@ -113,7 +113,7 @@ node --check skills/security-hardening/install.js
 # ✅ 正确
 node skills/security-hardening/install.js \
   --admin ou_4379c83438a527426548168a8ac72d07 \
-  --workspace /root/.openclaw/workspace \
+  --workspace /root/.nanobot/workspace \
   --models kimi-coding/k2p5
 
 # ❌ 错误（等号格式不被支持）
