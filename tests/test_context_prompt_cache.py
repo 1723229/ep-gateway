@@ -43,8 +43,7 @@ async def test_system_prompt_stays_stable_when_clock_changes(tmp_path, monkeypat
     assert prompt1 == prompt2
 
 
-@pytest.mark.asyncio
-async def test_runtime_context_merged_into_user_message(tmp_path) -> None:
+def test_runtime_context_is_separate_untrusted_user_message(tmp_path) -> None:
     """Runtime metadata should be merged with the user message."""
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
@@ -57,6 +56,9 @@ async def test_runtime_context_merged_into_user_message(tmp_path) -> None:
     )
 
     assert messages[0]["role"] == "system"
+    assert "## Current Session" not in messages[0]["content"]
+
+    # Runtime context is now merged with user message into a single message
     assert messages[-1]["role"] == "user"
     user_content = messages[-1]["content"]
     assert isinstance(user_content, str)
