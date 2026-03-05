@@ -283,16 +283,27 @@ class FeishuChannel(BaseChannel):
             self._on_message_sync
         ).build()
 
-        # Create WebSocket client for long connection
-        self._ws_client = lark.ws.Client(
-            self.config.app_id,
-            self.config.app_secret,
-            event_handler=event_handler,
-            log_level=lark.LogLevel.INFO
-        )
-
-        # Start WebSocket client in a separate thread with reconnect loop
+        # Start WebSocket client in a dedicated thread.
+        # The lark SDK's ws module captures asyncio.get_event_loop() at
+        # import time, grabbing the *main* loop.  Client.start() then calls
+        # loop.run_until_complete() which fails because that loop is already
+        # running.  We fix this by patching the module-level ``loop`` to a
+        # fresh event loop created inside the daemon thread, *before* the
+        # first Client instance is constructed.
         def run_ws():
+            import lark_oapi.ws.client as _ws_mod
+
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            _ws_mod.loop = new_loop
+
+            self._ws_client = lark.ws.Client(
+                self.config.app_id,
+                self.config.app_secret,
+                event_handler=event_handler,
+                log_level=lark.LogLevel.INFO,
+            )
+
             while self._running:
                 try:
                     self._ws_client.start()
@@ -301,6 +312,12 @@ class FeishuChannel(BaseChannel):
                 if self._running:
                     import time
                     time.sleep(5)
+                    self._ws_client = lark.ws.Client(
+                        self.config.app_id,
+                        self.config.app_secret,
+                        event_handler=event_handler,
+                        log_level=lark.LogLevel.INFO,
+                    )
 
         self._ws_thread = threading.Thread(target=run_ws, daemon=True)
         self._ws_thread.start()
@@ -614,6 +631,7 @@ class FeishuChannel(BaseChannel):
 
     def _get_message_sync(self, message_id: str) -> dict | None:
         """Fetch a message by ID and return its msg_type and body content."""
+        from lark_oapi.api.im.v1 import GetMessageRequest
         try:
             request = GetMessageRequest.builder() \
                 .message_id(message_id) \
