@@ -15,7 +15,8 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
 
-from nanobot.config.loader import load_config, get_config_path, get_data_dir
+from nanobot.config.loader import load_config, get_config_path
+from nanobot.config.paths import get_data_dir
 from nanobot.config.schema import Config
 from nanobot.bus.queue import MessageBus
 from nanobot.session.manager import SessionManager

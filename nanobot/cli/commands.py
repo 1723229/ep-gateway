@@ -716,7 +716,8 @@ def web(
     heartbeat services.  The web channel is force-enabled so the browser
     can communicate via WebSocket.
     """
-    from nanobot.config.loader import load_config, get_data_dir
+    from nanobot.config.loader import load_config
+    from nanobot.config.paths import get_data_dir
     from nanobot.bus.queue import MessageBus
     from nanobot.agent.loop import AgentLoop
     from nanobot.channels.manager import ChannelManager
@@ -1077,7 +1078,7 @@ def cron_list(
     all: bool = typer.Option(False, "--all", "-a", help="Include disabled jobs"),
 ):
     """List scheduled cron jobs."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -1138,7 +1139,7 @@ def cron_add(
     exact: bool = typer.Option(False, "--exact", help="Disable stagger (force exact timing)"),
 ):
     """Add a new cron job."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
     from nanobot.cron.types import CronSchedule
 
@@ -1195,7 +1196,7 @@ def cron_remove(
     job_id: str = typer.Argument(..., help="Job ID to remove"),
 ):
     """Remove a cron job."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -1216,7 +1217,7 @@ def cron_run(
     """Manually trigger a cron job."""
     import asyncio
 
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -1239,7 +1240,7 @@ def cron_runs(
     limit: int = typer.Option(20, "--limit", "-l", help="Number of recent runs to show"),
 ):
     """Show run history for a cron job."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -1281,7 +1282,7 @@ def cron_edit(
     enable: bool | None = typer.Option(None, "--enable/--disable", help="Enable or disable the job"),
 ):
     """Edit an existing cron job."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
@@ -1316,7 +1317,7 @@ def cron_edit(
 @cron_app.command("status")
 def cron_status():
     """Show cron service status."""
-    from nanobot.config.loader import get_data_dir
+    from nanobot.config.paths import get_data_dir
     from nanobot.cron.service import CronService
 
     store_path = get_data_dir() / "cron" / "jobs.json"
