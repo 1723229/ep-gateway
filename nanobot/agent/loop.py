@@ -504,7 +504,16 @@ class AgentLoop:
         if (unconsolidated >= self.memory_window and session.key not in self._consolidating):
             session_clone = session.clone()
             keep_count = min(10, max(2, self.memory_window // 2))
-            session.messages = session.messages[-keep_count:] if keep_count else []
+            kept = session.messages[-keep_count:] if keep_count else []
+            # Align to a user-message boundary so we never start with
+            # orphaned tool-result messages (which would cause LLM 400s).
+            for i, m in enumerate(kept):
+                if m.get("role") == "user":
+                    kept = kept[i:]
+                    break
+            else:
+                kept = []
+            session.messages = kept
             session.last_consolidated = 0
             self.sessions.save(session)
 

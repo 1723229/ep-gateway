@@ -53,6 +53,8 @@ class Session:
             if m.get("role") == "user":
                 sliced = sliced[i:]
                 break
+        else:
+            sliced = []
 
         out: list[dict[str, Any]] = []
         for m in sliced:
