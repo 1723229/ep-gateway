@@ -73,6 +73,6 @@ pip install requests
 
 ## 配置
 
-读取 `~/.hiperone/config/main.env` 中的飞书凭证：
-- `FEISHU_APP_ID`
-- `FEISHU_APP_SECRET`
+通过环境变量读取飞书凭证：
+- `NANOBOT_CHANNELS__FEISHU__APP_ID`
+- `NANOBOT_CHANNELS__FEISHU__APP_SECRET`

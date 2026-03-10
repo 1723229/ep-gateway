@@ -61,7 +61,7 @@ python scripts/logger.py workflow/ output
 ```python
 result = call_skill("feishu-logger", {
     "workflow_dir": "workflow/",
-    "output_dir": ".claude/skills/feishu-doc-creator"
+    "output_dir": "skills/feishu-doc-creator"
 })
 ```
 

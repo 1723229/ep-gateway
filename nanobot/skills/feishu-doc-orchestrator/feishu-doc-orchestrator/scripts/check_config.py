@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 飞书配置检查工具
-验证 config/feishu.json + ~/.hiperone/.env 配置是否正确
+验证环境变量配置是否正确
 """
 
 import sys
 from pathlib import Path
 
 # 添加技能目录到路径
-sys.path.insert(0, 'skills/feishu-doc-creator-with-permission/scripts')
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'feishu-doc-creator-with-permission' / 'scripts'))
 
 from doc_creator_with_permission import load_config, get_access_token
 import requests
@@ -111,7 +111,7 @@ def check_config():
         print()
         print("1. 访问飞书开放平台：https://open.feishu.cn/")
         print("2. 创建自建应用，获取 APP_ID 和 APP_SECRET")
-        print("3. 编辑配置文件：~/.hiperone/.env")
+        print("3. 设置环境变量 NANOBOT_CHANNELS__FEISHU__APP_ID / APP_SECRET")
         print("4. 重新运行检查：python skills/feishu-doc-orchestrator/feishu-doc-orchestrator/scripts/check_config.py")
         return 1
 

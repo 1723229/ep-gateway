@@ -85,7 +85,7 @@ result = call_skill("feishu-block-adder", {
 ### 完整块类型参考
 
 详细的块类型支持情况请查看：
-- `.claude/skills/feishu-md-parser/BLOCK_TYPES.md`
+- `feishu-md-parser/BLOCK_TYPES.md`
 
 ### 添加新块类型
 

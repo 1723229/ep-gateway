@@ -25,12 +25,17 @@ python3 skills/feishu-wiki-orchestrator/feishu-doc-orchestrator/scripts/orchestr
 
 ## 配置要求
 
-在 `feishu-config.env` 中添加知识库配置：
+所有配置通过环境变量读取：
 
-```env
-# 知识库配置
+```bash
+# 必需
+NANOBOT_CHANNELS__FEISHU__APP_ID=cli_xxx
+NANOBOT_CHANNELS__FEISHU__APP_SECRET=xxxxxxxx
+
+# 可选（有默认值）
 FEISHU_WIKI_SPACE_ID=7313882962775556100
-FEISHU_WIKI_PARENT_NODE=W43uwh0OCi8dwZktPeBcci2ZnRb
+FEISHU_WIKI_PARENT_NODE=Uqsqwoug5iYca3koiAQcUaEqnOf
+FEISHU_API_DOMAIN=https://open.feishu.cn
 ```
 
 ## 工作流程

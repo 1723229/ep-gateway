@@ -71,7 +71,7 @@ md = url_to_md("https://waytoagi.feishu.cn/wiki/xxx")
 md = url_to_md("https://uniquecapital.feishu.cn/wiki/xxx")
 ```
 
-- 飞书配置：`~/.claude/feishu-config.env`
+- 飞书配置：环境变量 `NANOBOT_CHANNELS__FEISHU__APP_ID` / `NANOBOT_CHANNELS__FEISHU__APP_SECRET`
 - 微信抓取：复用 `wechat-article-fetcher`
 
 ## 与旧技能的关系

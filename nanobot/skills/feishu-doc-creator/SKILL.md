@@ -48,12 +48,12 @@ python3 skills/feishu-doc-creator/scripts/create_doc.py wiki "标题" input.md
 
 ## 配置
 
-依赖飞书配置：`~/.claude/feishu-config.env`
+所有配置通过环境变量读取：
 
-- `FEISHU_APP_ID` / `FEISHU_APP_SECRET`
-- `FEISHU_DRIVE_FOLDER_TOKEN`（默认云盘文件夹）
-- `FEISHU_PARENT_DAILY_REPORT`（默认知识库父节点）
-- `FEISHU_AUTO_COLLABORATOR_ID`（自动添加权限的用户）
+- `NANOBOT_CHANNELS__FEISHU__APP_ID` / `NANOBOT_CHANNELS__FEISHU__APP_SECRET`（必需）
+- `FEISHU_DRIVE_FOLDER_TOKEN`（默认云盘文件夹，默认 `DYPXf8ZktlOCIXdmGq3cfjevn2F`）
+- `FEISHU_PARENT_DAILY_REPORT`（默认知识库父节点，默认 `LmZ6wKwTViA4bSkVSYfcJGFcnRf`）
+- `FEISHU_AUTO_COLLABORATOR_ID`（自动添加权限的用户，可选）
 
 ## 与旧技能的区别
 

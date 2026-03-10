@@ -11,33 +11,20 @@ description: 飞书文档创建主编排技能 - 将 Markdown 文件转换为飞
 
 ### 1. 配置飞书应用
 
-首次使用需要配置飞书开放平台应用信息：
+所有配置通过环境变量读取：
 
 ```bash
-python .claude/skills/feishu-doc-orchestrator/scripts/setup_config.py
+# 必需
+NANOBOT_CHANNELS__FEISHU__APP_ID=cli_xxx
+NANOBOT_CHANNELS__FEISHU__APP_SECRET=xxxxxxxx
+
+# 可选
+FEISHU_AUTO_COLLABORATOR_ID=ou_xxx
+FEISHU_DEFAULT_FOLDER=folder_token
+FEISHU_API_DOMAIN=https://open.feishu.cn  # 默认值
 ```
 
-或手动创建配置文件 `.claude/feishu-config.env`：
-
-```ini
-# 从 https://open.feishu.cn/ 获取
-FEISHU_APP_ID = "cli_xxx"
-FEISHU_APP_SECRET = "xxxxxxxx"
-
-# 可选：自动添加文档权限
-FEISHU_AUTO_COLLABORATOR_ID = "ou_xxx"
-
-# 可选：默认文件夹
-FEISHU_DEFAULT_FOLDER = "folder_token"
-```
-
-### 2. 检查配置
-
-```bash
-python .claude/skills/feishu-doc-orchestrator/scripts/check_config.py
-```
-
-### 3. 使用技能
+### 2. 使用技能
 
 ```
 请帮我将 docs/example.md 转换为飞书文档
@@ -66,12 +53,10 @@ feishu-doc-orchestrator/        # 主技能
 
 ```bash
 # 测试所有25种块类型
-python .claude/skills/feishu-doc-orchestrator/scripts/test_all_25_blocks.py
+python3 scripts/test_all_25_blocks.py
 ```
 
 ## 注意事项
 
-⚠️ **重要**：
-- 配置文件包含敏感信息，请勿提交到Git
-- `.claude/feishu-config.env` 和 `.claude/feishu-token.json` 已在 .gitignore 中
+- 飞书凭据通过环境变量 `NANOBOT_CHANNELS__FEISHU__APP_ID` / `APP_SECRET` 注入，不使用配置文件
 - 发布时请确保不包含个人隐私数据

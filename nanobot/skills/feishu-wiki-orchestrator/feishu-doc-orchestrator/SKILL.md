@@ -116,19 +116,23 @@ workflow/
 
 ## 配置要求
 
-需要配置 `.claude/feishu-config.env`：
-```ini
-FEISHU_APP_ID = "cli_xxx"
-FEISHU_APP_SECRET = "xxxxxxxx"
-FEISHU_API_DOMAIN = "https://open.feishu.cn"
-FEISHU_AUTO_COLLABORATOR_ID = "ou_xxx"
+所有配置通过环境变量读取：
+
+```bash
+# 必需
+NANOBOT_CHANNELS__FEISHU__APP_ID=cli_xxx
+NANOBOT_CHANNELS__FEISHU__APP_SECRET=xxxxxxxx
+
+# 可选（有默认值）
+FEISHU_API_DOMAIN=https://open.feishu.cn
+FEISHU_AUTO_COLLABORATOR_ID=ou_xxx
 ```
 
 ## 使用示例
 
 ### 示例1：基本使用
 ```
-请帮我将 .claude/skills/feishu-doc-creator/test_doc.md 转换为飞书文档
+请帮我将 docs/example.md 转换为飞书文档
 ```
 
 ### 示例2：指定标题
@@ -138,9 +142,8 @@ FEISHU_AUTO_COLLABORATOR_ID = "ou_xxx"
 
 ### 示例3：断点续传
 如果某一步失败，可以手动修改中间结果后继续：
-```
-# 第2步创建+权限失败，手动重新执行
-python .claude/skills/feishu-doc-creator-with-permission/scripts/doc_creator_with_permission.py "文档标题" workflow/step2_create_with_permission
+```bash
+python3 scripts/doc_creator_with_permission.py "文档标题" workflow/step2_create_with_permission
 ```
 
 ## 常见问题

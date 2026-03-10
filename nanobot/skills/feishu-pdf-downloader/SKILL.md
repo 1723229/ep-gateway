@@ -1,6 +1,6 @@
 ---
 name: feishu-pdf-downloader
-description: Download PDF and other files from Feishu/Lark cloud drive using file token. Use when user needs to download files from Feishu cloud drive, extract content from Feishu PDFs, or process documents stored in Feishu. Supports automatic credential loading from ~/.hiperone/.env.
+description: Download PDF and other files from Feishu/Lark cloud drive using file token. Use when user needs to download files from Feishu cloud drive, extract content from Feishu PDFs, or process documents stored in Feishu.
 ---
 
 # Feishu PDF Downloader
@@ -19,10 +19,10 @@ python3 skills/feishu-pdf-downloader/scripts/download_feishu_pdf.py I5YrbUXUjoru
 
 ## Prerequisites
 
-1. **Feishu App Credentials** in `~/.hiperone/.env`:
-   ```
-   FEISHU_APP_ID = "your_app_id"
-   FEISHU_APP_SECRET = "your_app_secret"
+1. **Feishu App Credentials** via environment variables:
+   ```bash
+   NANOBOT_CHANNELS__FEISHU__APP_ID=your_app_id
+   NANOBOT_CHANNELS__FEISHU__APP_SECRET=your_app_secret
    ```
 
 2. **File Token**: Get from Feishu cloud drive file URL or API
@@ -98,7 +98,7 @@ for i, image in enumerate(images):
 
 | Issue | Solution |
 |-------|----------|
-| "FEISHU_APP_ID not set" | Check ~/.hiperone/.env file format |
+| "FEISHU_APP_ID not set" | Check NANOBOT_CHANNELS__FEISHU__APP_ID env var |
 | "Failed to get token" | Verify app_id and app_secret are correct |
 | "Download failed" | Check file_token is valid and file exists |
 | Permission denied | Ensure app has drive:file:read permission |

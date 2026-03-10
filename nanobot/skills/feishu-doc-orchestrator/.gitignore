@@ -1,5 +1,4 @@
-# 飞书配置文件（包含敏感信息）
-feishu-config.env
+# 飞书 token 文件（包含敏感信息）
 feishu-token.json
 
 # Python
