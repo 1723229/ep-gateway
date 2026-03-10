@@ -26,16 +26,16 @@ Log learnings and errors to markdown files for continuous improvement. Important
 
 ## Setup
 
-The `.learnings/` directory lives in the nanobot workspace. Create it if not present:
+The `.learnings/` directory is automatically created in the nanobot workspace on first startup with three log files:
+- `LEARNINGS.md` — corrections, knowledge gaps, best practices
+- `ERRORS.md` — command failures, exceptions
+- `FEATURE_REQUESTS.md` — user-requested capabilities
+
+If the directory is missing for any reason, create it manually:
 
 ```bash
 mkdir -p ~/.hiperone/workspace/.learnings
 ```
-
-Then create the log files (or copy from `assets/`):
-- `LEARNINGS.md` — corrections, knowledge gaps, best practices
-- `ERRORS.md` — command failures, exceptions
-- `FEATURE_REQUESTS.md` — user-requested capabilities
 
 ### Promotion Targets
 
