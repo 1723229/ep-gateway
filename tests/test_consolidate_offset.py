@@ -516,7 +516,7 @@ class TestNewCommandArchival:
         loop.sessions.save(session)
         before_count = len(session.messages)
 
-        async def _failing_consolidate(_messages) -> bool:
+        async def _failing_consolidate(_messages, **kwargs) -> bool:
             return False
 
         loop.memory_consolidator.consolidate_messages = _failing_consolidate  # type: ignore[method-assign]
@@ -542,7 +542,7 @@ class TestNewCommandArchival:
 
         archived_count = -1
 
-        async def _fake_consolidate(messages) -> bool:
+        async def _fake_consolidate(messages, **kwargs) -> bool:
             nonlocal archived_count
             archived_count = len(messages)
             return True
@@ -567,7 +567,7 @@ class TestNewCommandArchival:
             session.add_message("assistant", f"resp{i}")
         loop.sessions.save(session)
 
-        async def _ok_consolidate(_messages) -> bool:
+        async def _ok_consolidate(_messages, **kwargs) -> bool:
             return True
 
         loop.memory_consolidator.consolidate_messages = _ok_consolidate  # type: ignore[method-assign]
@@ -622,30 +622,12 @@ class TestOrphanedToolMessageProtection:
         history = session.get_history()
         assert history == []
 
-    @pytest.mark.asyncio
-    async def test_trim_aligns_to_user_boundary(self, tmp_path: Path):
-        """Session trim during consolidation aligns to user message boundary."""
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.bus.events import InboundMessage
-        from nanobot.bus.queue import MessageBus
-        from nanobot.providers.base import LLMResponse
-
-        bus = MessageBus()
-        provider = MagicMock()
-        provider.get_default_model.return_value = "test-model"
-        loop = AgentLoop(
-            bus=bus, provider=provider, workspace=tmp_path, model="test-model", memory_window=10
-        )
-        loop.provider.chat = AsyncMock(return_value=LLMResponse(content="ok", tool_calls=[]))
-        loop.tools.get_definitions = MagicMock(return_value=[])
-
-        session = loop.sessions.get_or_create("cli:test")
-        # Build a session where the last N messages are tool/assistant pairs
-        # with a user message early on that would be outside the keep window
+    def test_trim_aligns_to_user_boundary(self):
+        """get_history drops leading non-user messages so history starts at a user turn."""
+        session = Session(key="test:trim_align")
         for i in range(5):
             session.add_message("user", f"msg{i}")
             session.add_message("assistant", f"resp{i}")
-        # Now add tool-heavy turns with no user messages
         for i in range(10):
             session.messages.append(
                 {"role": "assistant", "content": "", "tool_calls": [{"id": f"tc{i}", "type": "function", "function": {"name": "exec", "arguments": "{}"}}]}
@@ -653,24 +635,10 @@ class TestOrphanedToolMessageProtection:
             session.messages.append(
                 {"role": "tool", "tool_call_id": f"tc{i}", "name": "exec", "content": f"result{i}"}
             )
-        loop.sessions.save(session)
 
-        async def _ok_consolidate(sess, archive_all=False):
-            return True
+        # Mark early messages as consolidated so the window starts mid-stream
+        session.last_consolidated = 8
 
-        loop._consolidate_memory = _ok_consolidate
-
-        msg = InboundMessage(channel="cli", sender_id="user", chat_id="test", content="hello")
-        await loop._process_message(msg)
-
-        reloaded = loop.sessions.get_or_create("cli:test")
-        history = reloaded.get_history()
-        # History should not contain orphaned tool messages
-        for m in history:
-            if m["role"] == "tool":
-                # Every tool message should have been preceded by an assistant
-                # with tool_calls in the full history; but more importantly,
-                # the first message should be a user message
-                pass
-        if history:
-            assert history[0]["role"] == "user"
+        history = session.get_history()
+        assert len(history) > 0
+        assert history[0]["role"] == "user"

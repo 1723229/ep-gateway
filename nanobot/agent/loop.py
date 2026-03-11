@@ -127,6 +127,7 @@ class AgentLoop:
             context_window_tokens=context_window_tokens,
             build_messages=self.context.build_messages,
             get_tool_definitions=self.tools.get_definitions,
+            on_consolidated=self._fire_compact_hook,
         )
         self._register_default_tools()
 
@@ -228,6 +229,26 @@ class AgentLoop:
             logger.info("Registered {} OpenViking tools", 8)
         except Exception:
             logger.exception("Failed to register OpenViking tools")
+
+    async def _fire_compact_hook(
+        self, messages: list[dict], session_key: str,
+    ) -> None:
+        """Fire the message.compact hook after successful memory consolidation."""
+        if not self.hook_manager.has_hooks("message.compact"):
+            return
+
+        class _MsgBag:
+            """Lightweight stand-in for Session so the hook can read .messages."""
+            def __init__(self, msgs: list[dict]) -> None:
+                self.messages = msgs
+
+        ctx = HookContext(
+            event_type="message.compact",
+            session_key=session_key,
+            sender_id=self._current_sender_id,
+            channel=self._current_channel,
+        )
+        await self.hook_manager.fire("message.compact", ctx, session=_MsgBag(messages))
 
     async def _connect_mcp(self) -> None:
         """Connect to configured MCP servers (one-time, lazy)."""
@@ -464,7 +485,7 @@ class AgentLoop:
             await self.memory_consolidator.maybe_consolidate_by_tokens(session)
             self._set_tool_context(channel, chat_id, msg.metadata.get("message_id"))
             history = session.get_history(max_messages=0)
-            messages = self.context.build_messages(
+            messages = await self.context.build_messages(
                 history=history,
                 current_message=msg.content, channel=channel, chat_id=chat_id,
             )
@@ -519,7 +540,7 @@ class AgentLoop:
                 message_tool.start_turn()
 
         history = session.get_history(max_messages=0)
-        initial_messages = self.context.build_messages(
+        initial_messages = await self.context.build_messages(
             history=history,
             current_message=msg.content,
             media=msg.media if msg.media else None,

@@ -46,7 +46,7 @@ dependencies = [
     "openai>=2.8.0",
     "fastapi>=0.115.0,<1.0.0",
     "uvicorn[standard]>=0.34.0,<1.0.0",
-    "openviking>=0.1.18"
+    "openviking>=0.1.18",
     "tiktoken>=0.12.0,<1.0.0",
 ]
 
