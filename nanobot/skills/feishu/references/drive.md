@@ -17,7 +17,7 @@ data = drive_create_folder("新文件夹", folder_token="fldcnXXX")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py drive mkdir --name "新文件夹" --folder-token fldcnXXX
+python3 scripts/feishu_api.py drive mkdir --name "新文件夹" --folder-token fldcnXXX
 ```
 
 ### drive_upload_file
@@ -33,7 +33,7 @@ data = drive_upload_file("/path/to/file.pdf", parent_node="fldcnXXX")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py drive upload --file /path/to/file.pdf --parent-node fldcnXXX
+python3 scripts/feishu_api.py drive upload --file /path/to/file.pdf --parent-node fldcnXXX
 ```
 
 ### drive_download_file
@@ -48,7 +48,7 @@ path = drive_download_file("boxcnXXX", "/tmp/output.pdf")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py drive download --file-token boxcnXXX --save-path /tmp/output.pdf
+python3 scripts/feishu_api.py drive download --file-token boxcnXXX --save-path /tmp/output.pdf
 ```
 
 ### drive_move_file

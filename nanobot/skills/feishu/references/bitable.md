@@ -17,7 +17,7 @@ data = bitable_list_tables("JXdtbkkchaSXmksx6eFc2Eatn45")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable tables --app-token JXdtbkkchaSXmksx6eFc2Eatn45
+python3 scripts/feishu_api.py bitable tables --app-token JXdtbkkchaSXmksx6eFc2Eatn45
 ```
 
 ### bitable_get_fields
@@ -33,7 +33,7 @@ data = bitable_get_fields("JXdtbkkchaSXmksx6eFc2Eatn45", "tblXXX")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable fields --app-token JXdtbkkchaSXmksx6eFc2Eatn45 --table-id tblXXX
+python3 scripts/feishu_api.py bitable fields --app-token JXdtbkkchaSXmksx6eFc2Eatn45 --table-id tblXXX
 ```
 
 ### bitable_list_records
@@ -50,7 +50,7 @@ data = bitable_list_records("JXdtbkkchaSXmksx6eFc2Eatn45", "tblXXX", page_size=2
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable list --app-token JXdtbkkchaSXmksx6eFc2Eatn45 --table-id tblXXX --limit 20
+python3 scripts/feishu_api.py bitable list --app-token JXdtbkkchaSXmksx6eFc2Eatn45 --table-id tblXXX --limit 20
 ```
 
 ### bitable_add_record
@@ -69,7 +69,7 @@ data = bitable_add_record("JXdtbkkchaSXmksx6eFc2Eatn45", "tblXXX", {
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable add --app-token ... --table-id ... --fields '{"标题": "测试"}'
+python3 scripts/feishu_api.py bitable add --app-token ... --table-id ... --fields '{"标题": "测试"}'
 ```
 
 ### bitable_update_record
@@ -86,7 +86,7 @@ data = bitable_update_record("JXdtbkkchaSXmksx6eFc2Eatn45", "tblXXX", "recXXX", 
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable update --app-token ... --table-id ... --record-id recXXX --fields '{"状态": "已完成"}'
+python3 scripts/feishu_api.py bitable update --app-token ... --table-id ... --record-id recXXX --fields '{"状态": "已完成"}'
 ```
 
 ### bitable_delete_record
@@ -101,7 +101,7 @@ data = bitable_delete_record("JXdtbkkchaSXmksx6eFc2Eatn45", "tblXXX", "recXXX")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable delete --app-token ... --table-id ... --record-id recXXX
+python3 scripts/feishu_api.py bitable delete --app-token ... --table-id ... --record-id recXXX
 ```
 
 ## 预置常量（团队多维表格）
@@ -134,7 +134,7 @@ data = bitable_add_daily_report(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable daily-add --user-id ou_xxx --date 2026-03-12 \
+python3 scripts/feishu_api.py bitable daily-add --user-id ou_xxx --date 2026-03-12 \
     --project "XX项目" --content "完成模块开发" --hours 8
 ```
 
@@ -151,7 +151,7 @@ data = bitable_query_daily_reports(page_size=10)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable daily-query --limit 10
+python3 scripts/feishu_api.py bitable daily-query --limit 10
 ```
 
 ## 便捷函数：任务
@@ -178,7 +178,7 @@ data = bitable_add_task(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable task-add --name "实现登录功能" --serial 1 \
+python3 scripts/feishu_api.py bitable task-add --name "实现登录功能" --serial 1 \
     --project recXXX --executor ou_xxx --status "进行中" --hours 4
 ```
 
@@ -195,7 +195,7 @@ data = bitable_query_tasks(page_size=10)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable task-query --limit 10
+python3 scripts/feishu_api.py bitable task-query --limit 10
 ```
 
 ## 参数说明

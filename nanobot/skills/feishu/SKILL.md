@@ -13,16 +13,11 @@ metadata:
 
 # 飞书统一 API 技能
 
-## 脚本路径
-
-1. 确定本 SKILL.md 所在目录路径，记为 `SKILL_DIR`
-2. 脚本路径 = `${SKILL_DIR}/scripts/feishu_api.py`
-
 ## 使用流程
 
 1. 根据用户请求，从下方快速索引找到对应模块
 2. 阅读对应的 reference 文件获取函数签名和参数说明
-3. 通过 `exec` 工具调用脚本执行操作
+3. 通过 `exec` 工具调用脚本执行操作（脚本位于 `scripts/feishu_api.py`）
 
 ## 快速索引
 
@@ -43,20 +38,20 @@ metadata:
 ## CLI 调用格式
 
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py <module> <action> [options]
+python3 scripts/feishu_api.py <module> <action> [options]
 ```
 
 示例：
 
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat list
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat members --chat-id oc_xxx --all
-python3 ${SKILL_DIR}/scripts/feishu_api.py message send --receive-id oc_xxx --text "Hello"
-python3 ${SKILL_DIR}/scripts/feishu_api.py contact user --user-id ou_xxx
-python3 ${SKILL_DIR}/scripts/feishu_api.py doc search --keyword "季度报告"
-python3 ${SKILL_DIR}/scripts/feishu_api.py bitable daily-query --limit 10
-python3 ${SKILL_DIR}/scripts/feishu_api.py approval list --code E565EC28-...
-python3 ${SKILL_DIR}/scripts/feishu_api.py calendar events --calendar-id primary
+python3 scripts/feishu_api.py chat list
+python3 scripts/feishu_api.py chat members --chat-id oc_xxx --all
+python3 scripts/feishu_api.py message send --receive-id oc_xxx --text "Hello"
+python3 scripts/feishu_api.py contact user --user-id ou_xxx
+python3 scripts/feishu_api.py doc search --keyword "季度报告"
+python3 scripts/feishu_api.py bitable daily-query --limit 10
+python3 scripts/feishu_api.py approval list --code E565EC28-...
+python3 scripts/feishu_api.py calendar events --calendar-id primary
 ```
 
 ## 凭据配置

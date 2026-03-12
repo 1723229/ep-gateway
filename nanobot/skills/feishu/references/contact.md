@@ -18,7 +18,7 @@ user = data["user"]
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py contact user --user-id ou_xxx --id-type open_id
+python3 scripts/feishu_api.py contact user --user-id ou_xxx --id-type open_id
 ```
 
 ### list_department_users
@@ -39,7 +39,7 @@ data = list_department_users(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py contact dept-users --department-id 0 --limit 50
+python3 scripts/feishu_api.py contact dept-users --department-id 0 --limit 50
 ```
 
 ### get_department
@@ -55,7 +55,7 @@ data = get_department("od_xxx", department_id_type="open_department_id")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py contact dept --department-id od_xxx
+python3 scripts/feishu_api.py contact dept --department-id od_xxx
 ```
 
 ### list_departments
@@ -71,7 +71,7 @@ data = list_departments(parent_department_id="0", page_size=50)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py contact dept-children --parent-id 0 --limit 50
+python3 scripts/feishu_api.py contact dept-children --parent-id 0 --limit 50
 ```
 
 ## 所需权限

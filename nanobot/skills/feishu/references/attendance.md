@@ -34,7 +34,7 @@ data = get_attendance(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py attendance query --user-ids 6xxx --date-from 20260301 --date-to 20260312
+python3 scripts/feishu_api.py attendance query --user-ids 6xxx --date-from 20260301 --date-to 20260312
 ```
 
 ## 使用流程

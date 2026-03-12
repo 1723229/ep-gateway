@@ -41,7 +41,7 @@ data = approval_get_definition("E565EC28-57C7-461C-B7ED-1E2D838F4878")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py approval definition --code E565EC28-57C7-461C-B7ED-1E2D838F4878
+python3 scripts/feishu_api.py approval definition --code E565EC28-57C7-461C-B7ED-1E2D838F4878
 ```
 
 ### approval_list_instances
@@ -63,7 +63,7 @@ data = approval_list_instances(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py approval list --code E565EC28-... --limit 20
+python3 scripts/feishu_api.py approval list --code E565EC28-... --limit 20
 ```
 
 ### approval_get_instance
@@ -79,7 +79,7 @@ data = approval_get_instance("xxx-instance-code")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py approval get --instance-code xxx
+python3 scripts/feishu_api.py approval get --instance-code xxx
 ```
 
 ### approval_create_instance
@@ -97,7 +97,7 @@ data = approval_create_instance("E565EC28-...", "ou_xxx", form)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py approval create --code ... --user-id ou_xxx --form '[...]'
+python3 scripts/feishu_api.py approval create --code ... --user-id ou_xxx --form '[...]'
 ```
 
 ### approval_cancel_instance

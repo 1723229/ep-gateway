@@ -19,7 +19,7 @@ data = list_chats(page_size=20, page_token="")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat list --limit 20
+python3 scripts/feishu_api.py chat list --limit 20
 ```
 
 ### get_chat
@@ -35,7 +35,7 @@ info = get_chat("oc_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat info --chat-id oc_xxx
+python3 scripts/feishu_api.py chat info --chat-id oc_xxx
 ```
 
 ### get_chat_members
@@ -63,8 +63,8 @@ members = get_chat_members_all("oc_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat members --chat-id oc_xxx --all
-python3 ${SKILL_DIR}/scripts/feishu_api.py chat members --chat-id oc_xxx --limit 50
+python3 scripts/feishu_api.py chat members --chat-id oc_xxx --all
+python3 scripts/feishu_api.py chat members --chat-id oc_xxx --limit 50
 ```
 
 ## ID 前缀对应关系

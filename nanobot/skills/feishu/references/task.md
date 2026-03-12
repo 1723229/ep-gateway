@@ -23,7 +23,7 @@ data = task_create(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py task create --summary "完成季度报告" --description "Q1数据"
+python3 scripts/feishu_api.py task create --summary "完成季度报告" --description "Q1数据"
 ```
 
 ### task_get
@@ -39,7 +39,7 @@ data = task_get("task_id_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py task get --task-id xxx
+python3 scripts/feishu_api.py task get --task-id xxx
 ```
 
 ### task_list
@@ -56,7 +56,7 @@ data = task_list(page_size=50, completed=False)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py task list --limit 50
+python3 scripts/feishu_api.py task list --limit 50
 ```
 
 ### task_update
@@ -81,7 +81,7 @@ task_complete("task_id_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py task complete --task-id xxx
+python3 scripts/feishu_api.py task complete --task-id xxx
 ```
 
 ### tasklist_create

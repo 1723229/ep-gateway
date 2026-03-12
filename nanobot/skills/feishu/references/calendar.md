@@ -17,7 +17,7 @@ data = calendar_list(page_size=50)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py calendar list
+python3 scripts/feishu_api.py calendar list
 ```
 
 ### calendar_get
@@ -49,7 +49,7 @@ data = calendar_list_events(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py calendar events --calendar-id primary --start-time "2026-03-12T00:00:00+08:00"
+python3 scripts/feishu_api.py calendar events --calendar-id primary --start-time "2026-03-12T00:00:00+08:00"
 ```
 
 ### calendar_get_event
@@ -85,7 +85,7 @@ data = calendar_create_event(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py calendar create-event --summary "周会" \
+python3 scripts/feishu_api.py calendar create-event --summary "周会" \
     --start-time "2026-03-15T14:00:00+08:00" \
     --end-time "2026-03-15T15:00:00+08:00"
 ```

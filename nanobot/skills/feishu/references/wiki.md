@@ -17,7 +17,7 @@ data = wiki_list_spaces(page_size=50)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py wiki spaces
+python3 scripts/feishu_api.py wiki spaces
 ```
 
 ### wiki_get_space
@@ -48,8 +48,8 @@ data = wiki_list_nodes(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py wiki nodes --space-id xxx
-python3 ${SKILL_DIR}/scripts/feishu_api.py wiki nodes --space-id xxx --parent-node wikcnXXX
+python3 scripts/feishu_api.py wiki nodes --space-id xxx
+python3 scripts/feishu_api.py wiki nodes --space-id xxx --parent-node wikcnXXX
 ```
 
 ### wiki_get_node
@@ -90,8 +90,8 @@ data = wiki_search("开发规范", space_id="space_id_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py wiki search --keyword "开发规范"
-python3 ${SKILL_DIR}/scripts/feishu_api.py wiki search --keyword "开发规范" --space-id xxx
+python3 scripts/feishu_api.py wiki search --keyword "开发规范"
+python3 scripts/feishu_api.py wiki search --keyword "开发规范" --space-id xxx
 ```
 
 ## obj_type 对象类型

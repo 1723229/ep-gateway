@@ -33,7 +33,7 @@ data = send_text("oc_xxx", "你好！", receive_id_type="chat_id")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py message send --receive-id oc_xxx --text "你好" --id-type chat_id
+python3 scripts/feishu_api.py message send --receive-id oc_xxx --text "你好" --id-type chat_id
 ```
 
 ### reply_message
@@ -60,7 +60,7 @@ data = get_message("om_xxx")
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py message get --message-id om_xxx
+python3 scripts/feishu_api.py message get --message-id om_xxx
 ```
 
 ### get_chat_history
@@ -81,7 +81,7 @@ data = get_chat_history(
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py message history --chat-id oc_xxx --limit 20
+python3 scripts/feishu_api.py message history --chat-id oc_xxx --limit 20
 ```
 
 ## 消息类型 msg_type

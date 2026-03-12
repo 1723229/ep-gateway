@@ -18,8 +18,8 @@ files = list_files(parent_node="", page_size=20)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py doc list --limit 20
-python3 ${SKILL_DIR}/scripts/feishu_api.py doc list --parent-node fldcnXXX
+python3 scripts/feishu_api.py doc list --limit 20
+python3 scripts/feishu_api.py doc list --parent-node fldcnXXX
 ```
 
 ### read_doc
@@ -35,7 +35,7 @@ print(content)  # Markdown 文本
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py doc read --document-id doxcnXXX
+python3 scripts/feishu_api.py doc read --document-id doxcnXXX
 ```
 
 ### search_docs
@@ -51,7 +51,7 @@ items = search_docs("季度报告", page_size=10)
 
 **CLI**:
 ```bash
-python3 ${SKILL_DIR}/scripts/feishu_api.py doc search --keyword "季度报告" --limit 10
+python3 scripts/feishu_api.py doc search --keyword "季度报告" --limit 10
 ```
 
 ## 文档类型
