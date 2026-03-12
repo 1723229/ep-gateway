@@ -816,7 +816,7 @@ class FeishuChannel(BaseChannel):
         return ""
 
     def _get_message_sync(self, message_id: str) -> dict | None:
-        """Fetch a message by ID and return its msg_type and body content."""
+        """Fetch a message by ID and return its msg_type, body content, and mentions."""
         from lark_oapi.api.im.v1 import GetMessageRequest
         try:
             request = GetMessageRequest.builder() \
@@ -827,7 +827,7 @@ class FeishuChannel(BaseChannel):
                 msg = response.data.items[0]
                 body_content = msg.body.content if msg.body else None
                 if body_content:
-                    return {"msg_type": msg.msg_type, "content": body_content}
+                    return {"msg_type": msg.msg_type, "content": body_content, "mentions": msg.mentions or []}
         except Exception as e:
             logger.warning("Failed to fetch message {}: {}", message_id, e)
         return None
@@ -1009,6 +1009,12 @@ class FeishuChannel(BaseChannel):
                     p_type = parent_data["msg_type"]
                     p_content_str = parent_data["content"]
 
+                    # Build mention map for the parent message
+                    parent_mention_map: dict[str, str] = {}
+                    for m in parent_data.get("mentions", []):
+                        if m.key and m.name:
+                            parent_mention_map[m.key] = f"@{m.name}"
+
                     try:
                         p_json = json.loads(p_content_str)
                     except (json.JSONDecodeError, TypeError):
@@ -1044,6 +1050,11 @@ class FeishuChannel(BaseChannel):
                                 f"> {line}" for line in raw.splitlines()
                             )
                             quote_text = quoted_lines + "\n"
+
+                    # Replace mention placeholders in quoted text
+                    if parent_mention_map and quote_text:
+                        for key, display in parent_mention_map.items():
+                            quote_text = quote_text.replace(key, display)
 
             # Parse content
             content_parts = []
