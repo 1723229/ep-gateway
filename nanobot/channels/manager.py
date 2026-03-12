@@ -44,7 +44,15 @@ class ChannelManager:
                 continue
             try:
                 cls = load_channel_class(modname)
-                channel = cls(section, self.bus)
+                if modname == "web":
+                    channel = cls(
+                        section, self.bus,
+                        session_manager=self.session_manager,
+                        full_config=self.config,
+                        cron_service=self.cron_service,
+                    )
+                else:
+                    channel = cls(section, self.bus)
                 channel.transcription_api_key = groq_key
                 self.channels[modname] = channel
                 logger.info("{} channel enabled", cls.display_name)

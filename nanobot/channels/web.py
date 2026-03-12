@@ -31,6 +31,7 @@ class WebChannel(BaseChannel):
     """
 
     name = "web"
+    display_name = "Web"
 
     def __init__(
         self,
