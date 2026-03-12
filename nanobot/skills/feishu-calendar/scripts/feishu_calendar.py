@@ -1,0 +1,267 @@
+#!/usr/bin/env python3
+"""feishu_calendar - 飞书日历与日程 API
+
+凭据获取优先级: ~/.hiperone/config.json > 环境变量
+"""
+
+import argparse
+import json
+import os
+import sys
+import time as _time
+import requests
+from typing import Any, Dict, List, Optional
+
+
+BASE_URL = "https://open.feishu.cn/open-apis"
+
+
+def _load_nanobot_config() -> Dict[str, str]:
+    config_path = os.path.expanduser("~/.hiperone/config.json")
+    try:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            feishu = config.get("channels", {}).get("feishu", {})
+            if feishu.get("enabled"):
+                return {"appId": feishu.get("appId"), "appSecret": feishu.get("appSecret")}
+    except Exception:
+        pass
+    return {}
+
+
+_nanobot_cfg = _load_nanobot_config()
+APP_ID = _nanobot_cfg.get("appId") or os.environ.get("NANOBOT_CHANNELS__FEISHU__APP_ID", "")
+APP_SECRET = _nanobot_cfg.get("appSecret") or os.environ.get("NANOBOT_CHANNELS__FEISHU__APP_SECRET", "")
+_token_cache: Dict[str, Any] = {"token": "", "expires": 0}
+
+
+def get_tenant_access_token() -> str:
+    if not APP_ID or not APP_SECRET:
+        raise RuntimeError(
+            "缺少飞书凭据，请配置 ~/.hiperone/config.json 或设置环境变量 "
+            "NANOBOT_CHANNELS__FEISHU__APP_ID / NANOBOT_CHANNELS__FEISHU__APP_SECRET"
+        )
+    now = _time.time()
+    if _token_cache["token"] and now < _token_cache["expires"]:
+        return _token_cache["token"]
+    url = f"{BASE_URL}/auth/v3/tenant_access_token/internal"
+    resp = requests.post(url, json={"app_id": APP_ID, "app_secret": APP_SECRET}, timeout=10)
+    data = resp.json()
+    if data.get("code") != 0:
+        raise RuntimeError(f"获取 Token 失败: {data}")
+    _token_cache["token"] = data["tenant_access_token"]
+    _token_cache["expires"] = now + data.get("expire", 7200) - 60
+    return _token_cache["token"]
+
+
+def _headers() -> Dict[str, str]:
+    return {"Authorization": f"Bearer {get_tenant_access_token()}"}
+
+
+def _check(data: dict, action: str) -> dict:
+    if data.get("code") != 0:
+        raise RuntimeError(f"{action}失败: [{data.get('code')}] {data.get('msg', 'Unknown error')}")
+    return data.get("data", {})
+
+
+def _get(path: str, params: Optional[dict] = None, *, timeout: int = 10, action: str = "") -> dict:
+    resp = requests.get(f"{BASE_URL}{path}", headers=_headers(), params=params, timeout=timeout)
+    return _check(resp.json(), action or path)
+
+
+def _post(path: str, payload: Optional[dict] = None, *, params: Optional[dict] = None,
+          timeout: int = 10, action: str = "") -> dict:
+    resp = requests.post(f"{BASE_URL}{path}", headers=_headers(), json=payload,
+                         params=params, timeout=timeout)
+    return _check(resp.json(), action or path)
+
+
+def _put(path: str, payload: Optional[dict] = None, *, timeout: int = 10, action: str = "") -> dict:
+    resp = requests.put(f"{BASE_URL}{path}", headers=_headers(), json=payload, timeout=timeout)
+    return _check(resp.json(), action or path)
+
+
+def _delete(path: str, *, timeout: int = 10, action: str = "") -> dict:
+    resp = requests.delete(f"{BASE_URL}{path}", headers=_headers(), timeout=timeout)
+    return _check(resp.json(), action or path)
+
+
+def _pp(data: Any) -> None:
+    print(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+# ============================================================
+# 日历与日程 (calendar/v4)
+# ============================================================
+
+def calendar_list(page_size: int = 50, page_token: str = "") -> Dict[str, Any]:
+    """获取日历列表"""
+    params: Dict[str, Any] = {"page_size": page_size}
+    if page_token:
+        params["page_token"] = page_token
+    return _get("/calendar/v4/calendars", params, action="获取日历列表")
+
+
+def calendar_get(calendar_id: str) -> Dict[str, Any]:
+    """获取日历信息"""
+    return _get(f"/calendar/v4/calendars/{calendar_id}", action="获取日历信息")
+
+
+def calendar_list_events(
+    calendar_id: str,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    page_size: int = 50,
+    page_token: str = "",
+) -> Dict[str, Any]:
+    """获取日程列表"""
+    params: Dict[str, Any] = {"page_size": page_size}
+    if start_time:
+        params["start_time"] = start_time
+    if end_time:
+        params["end_time"] = end_time
+    if page_token:
+        params["page_token"] = page_token
+    return _get(f"/calendar/v4/calendars/{calendar_id}/events", params,
+                action="获取日程列表")
+
+
+def calendar_get_event(calendar_id: str, event_id: str) -> Dict[str, Any]:
+    """获取日程详情"""
+    return _get(f"/calendar/v4/calendars/{calendar_id}/events/{event_id}",
+                action="获取日程详情")
+
+
+def calendar_create_event(
+    calendar_id: str,
+    summary: str,
+    start_time: str,
+    end_time: str,
+    description: str = "",
+    attendees: Optional[List[Dict]] = None,
+    timezone: str = "Asia/Shanghai",
+) -> Dict[str, Any]:
+    """创建日程"""
+    event: Dict[str, Any] = {
+        "summary": summary,
+        "start_time": {"timestamp": start_time} if start_time.isdigit()
+            else {"date": start_time} if len(start_time) == 10
+            else {"timestamp": start_time},
+        "end_time": {"timestamp": end_time} if end_time.isdigit()
+            else {"date": end_time} if len(end_time) == 10
+            else {"timestamp": end_time},
+        "time_zone": timezone,
+    }
+    if description:
+        event["description"] = description
+    if attendees:
+        event["attendees"] = attendees
+    return _post(f"/calendar/v4/calendars/{calendar_id}/events", event,
+                 action="创建日程")
+
+
+def calendar_update_event(
+    calendar_id: str,
+    event_id: str,
+    fields: dict,
+) -> Dict[str, Any]:
+    """更新日程"""
+    return _put(f"/calendar/v4/calendars/{calendar_id}/events/{event_id}",
+                fields, action="更新日程")
+
+
+def calendar_delete_event(calendar_id: str, event_id: str) -> Dict[str, Any]:
+    """删除日程"""
+    return _delete(f"/calendar/v4/calendars/{calendar_id}/events/{event_id}",
+                   action="删除日程")
+
+
+def calendar_freebusy(
+    user_ids: List[str],
+    start_time: str,
+    end_time: str,
+    user_id_type: str = "open_id",
+) -> Dict[str, Any]:
+    """查询忙闲信息"""
+    return _post("/calendar/v4/freebusy/list", {
+        "time_min": start_time,
+        "time_max": end_time,
+        "user_id": user_ids[0] if len(user_ids) == 1 else None,
+    }, params={"user_id_type": user_id_type}, action="查询忙闲")
+
+
+def meeting_room_search(
+    query: str = "",
+    room_level_id: str = "",
+    page_size: int = 20,
+) -> Dict[str, Any]:
+    """搜索会议室"""
+    params: Dict[str, Any] = {"page_size": page_size}
+    if query:
+        params["query"] = query
+    if room_level_id:
+        params["room_level_id"] = room_level_id
+    return _get("/vc/v1/rooms", params, action="搜索会议室")
+
+
+def meeting_reserve(
+    end_time: str,
+    meeting_settings: Optional[dict] = None,
+) -> Dict[str, Any]:
+    """预约会议"""
+    payload: Dict[str, Any] = {"end_time": end_time}
+    if meeting_settings:
+        payload["meeting_settings"] = meeting_settings
+    return _post("/vc/v1/reserves/apply", payload, action="预约会议")
+
+
+# ============================================================
+# CLI
+# ============================================================
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="feishu_calendar", description="飞书日历与日程")
+    sub = parser.add_subparsers(dest="action")
+    p = sub.add_parser("list", help="列出日历")
+    p = sub.add_parser("events", help="列出日程")
+    p.add_argument("--calendar-id", default="primary")
+    p.add_argument("--start-time", default="")
+    p.add_argument("--end-time", default="")
+    p.add_argument("--limit", type=int, default=50)
+    p = sub.add_parser("create-event", help="创建日程")
+    p.add_argument("--calendar-id", default="primary")
+    p.add_argument("--summary", required=True)
+    p.add_argument("--start-time", required=True)
+    p.add_argument("--end-time", required=True)
+    p.add_argument("--description", default="")
+    return parser
+
+
+def _run_cli(args: argparse.Namespace) -> None:
+    act = args.action
+    if act == "list":
+        _pp(calendar_list())
+    elif act == "events":
+        _pp(calendar_list_events(args.calendar_id, args.start_time or None,
+                                 args.end_time or None, args.limit))
+    elif act == "create-event":
+        _pp(calendar_create_event(args.calendar_id, args.summary,
+                                  args.start_time, args.end_time, args.description))
+
+
+def main() -> int:
+    parser = _build_parser()
+    args = parser.parse_args()
+    if not args.action:
+        parser.print_help()
+        return 1
+    try:
+        _run_cli(args)
+    except Exception as e:
+        print(f"错误: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
