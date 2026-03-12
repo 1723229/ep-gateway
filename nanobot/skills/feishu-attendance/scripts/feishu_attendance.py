@@ -120,11 +120,23 @@ def get_attendance(
 # CLI
 # ============================================================
 
+def _resolve_ids(raw: str) -> List[str]:
+    """接受 open_id 或 employee_id，自动转换为 employee_id 列表"""
+    ids = [i.strip() for i in raw.split(",") if i.strip()]
+    result = []
+    for uid in ids:
+        if uid.startswith("ou_"):
+            result.append(get_user_employee_id(uid))
+        else:
+            result.append(uid)
+    return result
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="feishu_attendance", description="飞书考勤查询")
     sub = parser.add_subparsers(dest="action")
     p = sub.add_parser("query", help="查询打卡")
-    p.add_argument("--user-ids", required=True, help="employee_id,逗号分隔")
+    p.add_argument("--user-ids", required=True, help="employee_id 或 open_id(ou_开头自动转换)，逗号分隔")
     p.add_argument("--date-from", type=int, required=True, help="yyyyMMdd")
     p.add_argument("--date-to", type=int, required=True, help="yyyyMMdd")
     return parser
@@ -133,7 +145,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def _run_cli(args: argparse.Namespace) -> None:
     act = args.action
     if act == "query":
-        _pp(get_attendance(args.user_ids.split(","), args.date_from, args.date_to))
+        eids = _resolve_ids(args.user_ids)
+        _pp(get_attendance(eids, args.date_from, args.date_to))
 
 
 def main() -> int:
