@@ -1,6 +1,6 @@
 ---
 name: feishu-bitable
-description: 飞书多维表格 — 数据表 CRUD、日报录入、任务管理
+description: 飞书多维表格 — 数据表 CRUD、智能字段转换、日报/任务录入、批量操作
 metadata:
   requires:
     - type: binary
@@ -9,131 +9,191 @@ metadata:
 
 # 飞书多维表格 (Bitable)
 
-飞书多维表格 API，支持数据表的 CRUD 操作和字段定义查询。
+支持飞书多维表格 API，支持数据表的 CRUD 操作和字段定义查询、智能字段格式转换、便捷业务函数、批量操作。
 
-## 使用流程
+## 功能特点
 
-1. 根据下方 API 函数说明确认所需操作
-2. 通过 `exec` 工具调用脚本执行
+### 1. 智能字段转换
+自动处理日期、用户、多选等字段格式，无需手动转换毫秒时间戳。
+
+### 2. 错误提示优化
+API 错误码映射为可读提示，快速定位问题。
+
+### 3. 便捷函数
+- `daily-add` - 录入日报
+- `task-add` - 录入任务（完整功能）
+
+### 4. 批量操作
+- `batch-add` - 批量创建记录
+
+---
 
 ## API 函数
 
-### bitable_list_tables
+### 基础函数
 
-获取多维表格中的数据表列表。
+| 函数 | 说明 |
+|------|------|
+| `bitable_list_tables` | 获取数据表列表 |
+| `bitable_get_fields` | 获取字段定义 |
+| `bitable_list_records` | 查询记录（支持 filter 表达式） |
+| `bitable_add_record` | 创建记录 |
+| `bitable_add_record_smart` | 创建记录（智能转换格式） |
+| `bitable_update_record` | 更新记录 |
+| `bitable_update_record_smart` | 更新记录（智能转换格式） |
+| `bitable_delete_record` | 删除记录 |
+| `bitable_batch_add_records` | 批量创建记录（飞书批量 API，单次最多 500 条） |
 
-```
-python3 scripts/feishu_bitable.py tables --app-token JXdtbkkchaSXmksx6eFc2Eatn45
-```
+### 便捷函数
 
-### bitable_get_fields
+| 函数 | 说明 |
+|------|------|
+| `bitable_add_daily_report` | 录入日报 |
+| `bitable_query_daily_reports` | 查询日报 |
+| `bitable_add_task` | 录入任务 |
+| `bitable_query_tasks` | 查询任务 |
 
-获取字段定义。
+---
 
-```
-python3 scripts/feishu_bitable.py fields --app-token TOKEN --table-id tblXXX
-```
+## 使用示例
 
-### bitable_list_records
+### 智能创建记录
 
-查询多维表格记录。
-
-```
-python3 scripts/feishu_bitable.py list --app-token TOKEN --table-id tblXXX --limit 20
-```
-
-### bitable_add_record
-
-创建记录。
-
-```
-python3 scripts/feishu_bitable.py add --app-token TOKEN --table-id tblXXX --fields '{"标题": "测试"}'
-```
-
-### bitable_update_record
-
-更新记录。
-
-```
-python3 scripts/feishu_bitable.py update --app-token TOKEN --table-id tblXXX --record-id recXXX --fields '{"状态": "已完成"}'
+```bash
+# 自动转换日期和用户字段格式
+python3 scripts/feishu_bitable.py add-smart \
+  --app-token JXdtbkkchaSXmksx6eFc2Eatn45 \
+  --table-id tblH6xn2dp6E1UtD \
+  --fields '{"任务名称":"测试任务","执行人":"ou_xxx","计划截止时间":"2026-03-14","状态":["待处理"]}'
 ```
 
-### bitable_delete_record
+### 录入日报
 
-删除记录。
-
-```
-python3 scripts/feishu_bitable.py delete --app-token TOKEN --table-id tblXXX --record-id recXXX
-```
-
-## 便捷函数：日报
-
-```
-python3 scripts/feishu_bitable.py daily-add --user-id ou_xxx --date 2026-03-12 --project "XX项目" --content "完成模块开发" --hours 8
-python3 scripts/feishu_bitable.py daily-query --limit 10
+```bash
+python3 scripts/feishu_bitable.py daily-add \
+  --user-id ou_617ce34ae1db1f2b7eb2aa04f55aca11 \
+  --date 2026-03-13 \
+  --project hiperone_bot 开发 \
+  --content "完成功能开发" \
+  --hours 8
 ```
 
-## 便捷函数：任务
+### 录入任务
 
-```
-python3 scripts/feishu_bitable.py task-add --name "实现登录" --serial 1 --project recXXX --executor ou_xxx --status "进行中" --hours 4
-python3 scripts/feishu_bitable.py task-query --limit 10
+```bash
+python3 scripts/feishu_bitable.py task-add \
+  --name "明天休息下" \
+  --project recXXX \
+  --executor ou_617ce34ae1db1f2b7eb2aa04f55aca11 \
+  --status 待处理 \
+  --deadline 7 \
+  --hours 0 \
+  --description "个人休息日"
 ```
 
-## 预置常量（团队多维表格）
+### 智能更新记录
+
+```bash
+python3 scripts/feishu_bitable.py update-smart \
+  --app-token JXdtbkkchaSXmksx6eFc2Eatn45 \
+  --table-id tblH6xn2dp6E1UtD \
+  --record-id recXXX \
+  --fields '{"状态":"完成","实际完成时间":"2026-03-13"}'
+```
+
+### 批量创建记录
+
+```bash
+# 普通批量
+python3 scripts/feishu_bitable.py batch-add \
+  --app-token JXdtbkkchaSXmksx6eFc2Eatn45 \
+  --table-id tblH6xn2dp6E1UtD \
+  --records '[{"任务名称":"任务 1","状态":["待处理"]},{"任务名称":"任务 2","状态":["待处理"]}]'
+
+# 带智能转换的批量
+python3 scripts/feishu_bitable.py batch-add \
+  --app-token JXdtbkkchaSXmksx6eFc2Eatn45 \
+  --table-id tblH6xn2dp6E1UtD \
+  --records '[{"任务名称":"任务","执行人":"ou_xxx","计划截止时间":"2026-03-20"}]' \
+  --smart
+```
+
+### 带过滤条件查询
+
+```bash
+python3 scripts/feishu_bitable.py list \
+  --app-token JXdtbkkchaSXmksx6eFc2Eatn45 \
+  --table-id tblYWOnDxGsVSfDN \
+  --filter 'CurrentValue.[项目]="华谊问数问知"' \
+  --limit 10
+```
+
+---
+
+## 字段格式自动转换
+
+| 字段类型 | 输入格式 | 自动转换为 |
+|---------|---------|-----------|
+| DateTime | `"2026-03-14"` | 毫秒时间戳 |
+| DateTime | `1773417600000` | 保持不变 |
+| User | `"ou_xxx"` | `[{"id":"ou_xxx"}]` |
+| MultiSelect | `"选项"` | `["选项"]` |
+| Number | `"8"` | `8` |
+
+---
+
+## 错误码提示
+
+| 错误码 | 提示 |
+|--------|------|
+| 1254045 | 字段名不存在，请先调用 bitable_get_fields 查看字段定义 |
+| 1254064 | 日期字段格式错误，请使用毫秒时间戳或 YYYY-MM-DD 格式 |
+| 1254066 | 用户字段格式错误，请提供有效的 open_id 或 union_id |
+| 1254063 | 单选/多选字段值错误，请检查选项是否存在 |
+
+---
+
+## 预置常量
 
 | 常量 | 值 | 说明 |
 |------|------|------|
-| APP_TOKEN | JXdtbkkchaSXmksx6eFc2Eatn45 | 多维表格 app_token |
+| BITABLE_APP_TOKEN | JXdtbkkchaSXmksx6eFc2Eatn45 | 多维表格 app_token |
 | DAILY_TABLE_ID | tblYWOnDxGsVSfDN | 日报表 |
 | TASK_TABLE_ID | tblH6xn2dp6E1UtD | 任务表 |
 | PROJECT_TABLE_ID | tblihZwJnOg84PUQ | 项目表 |
 
-## 参数说明
+---
 
-- `app_token`: 多维表格的 token（从 URL 提取），如 `JXdtbkkchaSXmksx6eFc2Eatn45`
-- `table_id`: 数据表 ID，如 `tblYWOnDxGsVSfDN`
-- `record_id`: 记录 ID，如 `recXXX`
+## 字段缓存
 
-### 从 URL 提取 app_token
+`bitable_add_record_smart` 和 `bitable_update_record_smart` 会自动缓存字段定义，避免重复 API 调用。日期转换统一使用 UTC+8 (Asia/Shanghai) 时区。
 
-| URL 格式 | 说明 |
-|----------|------|
-| `https://xxx.feishu.cn/base/{app_token}?table=tblXXX` | 直接提取 |
-| `https://xxx.feishu.cn/wiki/{node_token}?table=tblXXX` | 需先通过 Wiki API 获取 `obj_token` |
+```python
+# 首次调用会获取字段定义并缓存
+bitable_add_record_smart(app_token, table_id, fields)
 
-## 字段类型与写入格式
+# 后续调用使用缓存，性能更好
+bitable_add_record_smart(app_token, table_id, fields2)
+```
 
-| 类型编号 | 字段类型 | 写入格式 | 示例 |
-|----------|----------|----------|------|
-| 1 | 多行文本 | string | `"Hello"` |
-| 2 | 数字 | number | `2323.23` |
-| 3 | 单选 | string | `"选项1"` |
-| 4 | 多选 | string[] | `["选项1", "选项2"]` |
-| 5 | 日期 | number（毫秒时间戳） | `1690992000000` |
-| 7 | 复选框 | boolean | `true` |
-| 11 | 人员 | object[] | `[{"id": "ou_xxx"}]` |
-| 13 | 电话号码 | string | `"13800138000"` |
-| 15 | 超链接 | object | `{"text": "链接", "link": "https://..."}` |
-| 18 | 单向关联 | string[] | `["recXXX"]` |
-| 21 | 双向关联 | string[] | `["recXXX"]` |
-| 19/20/1001-1004 | 公式/创建时间等 | — | 只读 |
+---
 
-## 常见错误
+## CLI 命令
 
-| 错误 | 正确做法 |
-|------|----------|
-| 应用无法访问已有多维表格 | 文档右上角 → 更多 → 添加文档应用 |
-| 日期字段传 ISO 字符串 | 必须传毫秒时间戳数字 |
-| 人员字段传字符串 | 必须传 `[{"id": "ou_xxx"}]` 数组格式 |
-| `app_token` 和 `table_id` 搞混 | `app_token` 是多维表格级别，`table_id` 是数据表级别 |
-| Wiki URL 直接当 app_token | 需先 `wiki_get_node()` 获取 `obj_token` |
+| 命令 | 说明 |
+|------|------|
+| `tables` | 列出数据表 |
+| `fields` | 获取字段定义 |
+| `list` | 查询记录（支持 `--filter`） |
+| `add` | 创建记录 |
+| `add-smart` | 创建记录（智能转换格式） |
+| `update` | 更新记录 |
+| `update-smart` | 更新记录（智能转换格式） |
+| `delete` | 删除记录 |
+| `batch-add` | 批量创建记录（支持 `--smart`） |
+| `daily-add` | 录入日报 |
+| `daily-query` | 查询日报 |
+| `task-add` | 录入任务 |
+| `task-query` | 查询任务 |
 
-## 所需权限
-
-- `bitable:app` — 多维表格完整权限
-- 或 `bitable:app:readonly` — 只读权限
-
-## 凭据
-
-自动读取 `~/.hiperone/config.json` 或环境变量 `NANOBOT_CHANNELS__FEISHU__APP_ID` / `NANOBOT_CHANNELS__FEISHU__APP_SECRET`，无需手动配置。
+---

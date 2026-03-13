@@ -56,8 +56,8 @@ class SelfImprovementHook(Hook):
         has_error_pattern = bool(_ERROR_PATTERNS.search(result_str))
 
         if has_nonzero_exit or has_error_pattern:
-            logger.debug("Self-improvement hook detected potential error in {} output (exit_code={}, pattern={})",
-                         tool_name, has_nonzero_exit, has_error_pattern)
+            # logger.debug("Self-improvement hook detected potential error in {} output (exit_code={}, pattern={})",
+            #              tool_name, has_nonzero_exit, has_error_pattern)
             return {"tool_name": tool_name, "result": result_str + _REMINDER}
 
         return {"tool_name": tool_name, "result": result}
