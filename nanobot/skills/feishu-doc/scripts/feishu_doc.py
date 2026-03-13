@@ -145,13 +145,14 @@ def create_doc(title: str, folder_token: str = "") -> Dict:
 def create_blocks(document_id: str, block_id: str, children: List[Dict], index: int = -1) -> Dict:
     """在文档中创建内容块
 
-    飞书 API 要求所有文本类 block 都使用 "text" 作为内容 key:
-    [
-      {"block_type": 2, "text": {"elements": [{"text_run": {"content": "Hello"}}]}},
-      {"block_type": 3, "text": {"elements": [{"text_run": {"content": "标题"}}]}}
-    ]
-    block_type: 2=paragraph, 3=heading1, 4=heading2, 5=heading3,
-                7=bullet_list, 8=number_list, 10=code, 11=quote
+    每个 block 的内容 key 必须与 block_type 对应的名称一致:
+      {"block_type": 2, "text": {...}}        — 段落
+      {"block_type": 3, "heading1": {...}}    — 一级标题
+      {"block_type": 4, "heading2": {...}}    — 二级标题
+      {"block_type": 12, "bullet": {...}}     — 无序列表
+      {"block_type": 13, "ordered": {...}}    — 有序列表
+      {"block_type": 15, "quote": {...}}      — 引用
+    使用 _make_block(type_name, elements) 自动构造正确格式。
     """
     payload: Dict[str, Any] = {"children": children}
     if index >= 0:
@@ -161,9 +162,90 @@ def create_blocks(document_id: str, block_id: str, children: List[Dict], index: 
     return data
 
 
-def _make_text_element(content: str) -> Dict:
+def _make_text_element(content: str, bold: bool = False, italic: bool = False) -> Dict:
     """构造一个 text_run 元素"""
-    return {"text_run": {"content": content, "text_element_style": {}}}
+    style: Dict[str, Any] = {}
+    if bold:
+        style["bold"] = True
+    if italic:
+        style["italic"] = True
+    return {"text_run": {"content": content, "text_element_style": style}}
+
+
+def _parse_inline(text: str) -> List[Dict]:
+    """解析行内 Markdown 格式（**加粗**、*斜体*），返回 text_run 元素列表"""
+    import re
+    elements: List[Dict] = []
+    pattern = re.compile(r'(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*)')
+    last = 0
+    for m in pattern.finditer(text):
+        if m.start() > last:
+            elements.append(_make_text_element(text[last:m.start()]))
+        if m.group(2):
+            elements.append(_make_text_element(m.group(2), bold=True, italic=True))
+        elif m.group(3):
+            elements.append(_make_text_element(m.group(3), bold=True))
+        elif m.group(4):
+            elements.append(_make_text_element(m.group(4), italic=True))
+        last = m.end()
+    if last < len(text):
+        elements.append(_make_text_element(text[last:]))
+    return elements if elements else [_make_text_element(text)]
+
+
+_BLOCK_TYPE_MAP = {
+    "text": 2, "heading1": 3, "heading2": 4, "heading3": 5,
+    "heading4": 6, "heading5": 7, "heading6": 8, "heading7": 9,
+    "heading8": 10, "heading9": 11, "bullet": 12, "ordered": 13,
+    "code": 14, "quote": 15, "todo": 17, "divider": 22,
+}
+_BLOCK_TYPE_KEY = {v: k for k, v in _BLOCK_TYPE_MAP.items()}
+
+
+def _make_block(block_type_name: str, elements: List[Dict]) -> Dict:
+    """构造一个飞书文档 block，自动使用正确的 type 编号和 key"""
+    bt = _BLOCK_TYPE_MAP[block_type_name]
+    return {"block_type": bt, block_type_name: {"elements": elements}}
+
+
+def _md_line_to_block(line: str) -> Dict:
+    """将单行 Markdown 转换为飞书 block 结构"""
+    import re
+    stripped = line.strip()
+
+    heading_match = re.match(r'^(#{1,6})\s+(.*)', stripped)
+    if heading_match:
+        level = len(heading_match.group(1))
+        name = f"heading{level}"
+        return _make_block(name, _parse_inline(heading_match.group(2)))
+
+    if re.match(r'^[-*+]\s+', stripped):
+        content = re.sub(r'^[-*+]\s+', '', stripped)
+        return _make_block("bullet", _parse_inline(content))
+
+    ordered_match = re.match(r'^\d+[.)]\s+(.*)', stripped)
+    if ordered_match:
+        return _make_block("ordered", _parse_inline(ordered_match.group(1)))
+
+    if stripped.startswith('>'):
+        content = re.sub(r'^>\s*', '', stripped)
+        return _make_block("quote", _parse_inline(content))
+
+    return _make_block("text", _parse_inline(stripped))
+
+
+def markdown_to_blocks(markdown: str) -> List[Dict]:
+    """将 Markdown 文本转换为飞书 block 列表
+
+    支持: # 标题(1-4级), - 无序列表, 1. 有序列表, > 引用, **加粗**, *斜体*
+    空行跳过。
+    """
+    blocks = []
+    for line in markdown.split("\n"):
+        if not line.strip():
+            continue
+        blocks.append(_md_line_to_block(line))
+    return blocks
 
 
 def create_text_blocks(document_id: str, texts: List[str], block_id: str = "") -> Dict:
@@ -173,13 +255,22 @@ def create_text_blocks(document_id: str, texts: List[str], block_id: str = "") -
     block_id: 父块 ID，默认为文档根块（即 document_id）
     """
     parent = block_id or document_id
-    children = []
-    for text in texts:
-        children.append({
-            "block_type": 2,
-            "text": {"elements": [_make_text_element(text)]}
-        })
+    children = [_make_block("text", [_make_text_element(t)]) for t in texts]
     return create_blocks(document_id, parent, children)
+
+
+def create_doc_with_content(title: str, content: str, folder_token: str = "") -> Dict:
+    """创建文档并一次性写入 Markdown 内容
+
+    content: Markdown 格式文本，支持标题、列表、加粗、斜体、引用
+    返回: {document_id, title, url}
+    """
+    result = create_doc(title, folder_token)
+    if content and content.strip():
+        blocks = markdown_to_blocks(content)
+        if blocks:
+            create_blocks(result["document_id"], result["document_id"], blocks)
+    return result
 
 
 def delete_doc(document_id: str) -> Dict:
@@ -194,8 +285,8 @@ def search_docs(keyword: str, page_size: int = 10) -> List[Dict]:
     return data.get("docs_entities", [])
 
 
-_BLOCK_TYPE_TEXT = {2, 3, 4, 5, 7, 8, 11}
-_BLOCK_TYPE_PREFIX = {3: "## ", 4: "### ", 5: "#### ", 7: "- ", 8: "1. "}
+_READ_TEXT_TYPES = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 17}
+_READ_PREFIX = {3: "# ", 4: "## ", 5: "### ", 6: "#### ", 12: "- ", 13: "1. "}
 
 
 def _extract_text_from_elements(elements: list) -> str:
@@ -214,17 +305,20 @@ def _extract_text_from_blocks(blocks: list) -> str:
         bt = block.get("block_type")
         if bt == 1:
             continue
-        if bt == 10:
+        if bt == 14:
             text_parts.append("```\n" + block.get("code", {}).get("content", "") + "\n```")
             continue
-        if bt not in _BLOCK_TYPE_TEXT:
+        if bt not in _READ_TEXT_TYPES:
             continue
-        elements = block.get("text", {}).get("elements", [])
+        key = _BLOCK_TYPE_KEY.get(bt, "text")
+        elements = block.get(key, {}).get("elements", [])
+        if not elements:
+            elements = block.get("text", {}).get("elements", [])
         text = _extract_text_from_elements(elements)
-        if bt == 11:
+        if bt == 15:
             text = "\n".join("> " + line for line in text.split("\n"))
         else:
-            text = _BLOCK_TYPE_PREFIX.get(bt, "") + text
+            text = _READ_PREFIX.get(bt, "") + text
         if text:
             text_parts.append(text)
     return "\n".join(text_parts)
@@ -250,7 +344,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("create", help="创建文档")
     p.add_argument("--title", required=True, help="文档标题")
     p.add_argument("--folder-token", default="", help="目标文件夹 token（可选）")
-    p.add_argument("--content", default="", help="初始文本内容，多段用 \\n 分隔（可选）")
+    p.add_argument("--content", default="", help="Markdown 内容，支持标题/列表/加粗/引用（可选）")
+    p.add_argument("--content-file", default="", help="从文件读取 Markdown 内容（可选）")
     p = sub.add_parser("create-block", help="在文档中添加内容块")
     p.add_argument("--document-id", required=True, help="文档 ID")
     p.add_argument("--block-id", default="", help="父块 ID（默认为文档根块）")
@@ -271,12 +366,16 @@ def _run_cli(args: argparse.Namespace) -> None:
     elif act == "search":
         _pp(search_docs(args.keyword, args.limit))
     elif act == "create":
-        result = create_doc(args.title, args.folder_token)
-        if args.content:
-            raw = args.content.replace("\\n", "\n")
-            texts = [t for t in raw.split("\n") if t]
-            if texts:
-                create_text_blocks(result["document_id"], texts)
+        content = ""
+        if args.content_file:
+            with open(args.content_file, "r", encoding="utf-8") as f:
+                content = f.read()
+        elif args.content:
+            content = args.content.replace("\\n", "\n")
+        if content:
+            result = create_doc_with_content(args.title, content, args.folder_token)
+        else:
+            result = create_doc(args.title, args.folder_token)
         _pp(result)
     elif act == "create-block":
         texts = json.loads(args.texts)
