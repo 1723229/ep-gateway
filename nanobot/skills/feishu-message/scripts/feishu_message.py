@@ -116,7 +116,7 @@ def send_message(
     receive_id: str,
     msg_type: str,
     content: str,
-    receive_id_type: str = "chat_id",
+    receive_id_type: str = "open_id",
 ) -> Dict[str, Any]:
     """发送消息"""
     payload = {"receive_id": receive_id, "msg_type": msg_type, "content": content}
@@ -124,7 +124,7 @@ def send_message(
                  action="发送消息")
 
 
-def send_text(receive_id: str, text: str, receive_id_type: str = "chat_id") -> Dict[str, Any]:
+def send_text(receive_id: str, text: str, receive_id_type: str = "open_id") -> Dict[str, Any]:
     """发送文本消息（便捷函数）"""
     return send_message(receive_id, "text", json.dumps({"text": text}), receive_id_type)
 
@@ -179,12 +179,12 @@ def upload_file(file_path: str, file_type: str = "stream") -> str:
     return data.get("file_key", "")
 
 
-def send_image(receive_id: str, image_key: str, receive_id_type: str = "chat_id") -> Dict[str, Any]:
+def send_image(receive_id: str, image_key: str, receive_id_type: str = "open_id") -> Dict[str, Any]:
     """发送图片消息"""
     return send_message(receive_id, "image", json.dumps({"image_key": image_key}), receive_id_type)
 
 
-def send_file(receive_id: str, file_key: str, receive_id_type: str = "chat_id") -> Dict[str, Any]:
+def send_file(receive_id: str, file_key: str, receive_id_type: str = "open_id") -> Dict[str, Any]:
     """发送文件消息"""
     return send_message(receive_id, "file", json.dumps({"file_key": file_key}), receive_id_type)
 
@@ -192,7 +192,7 @@ def send_file(receive_id: str, file_key: str, receive_id_type: str = "chat_id") 
 def send_card(
     receive_id: str,
     card_json: str,
-    receive_id_type: str = "chat_id",
+    receive_id_type: str = "open_id",
 ) -> Dict[str, Any]:
     """发送消息卡片 (interactive card)
 
@@ -214,7 +214,7 @@ def recall_message(message_id: str) -> Dict[str, Any]:
 def forward_message(
     message_id: str,
     receive_id: str,
-    receive_id_type: str = "chat_id",
+    receive_id_type: str = "open_id",
 ) -> Dict[str, Any]:
     """转发消息"""
     return _post(
@@ -260,23 +260,23 @@ def _build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("send", help="发送文本")
     p.add_argument("--receive-id", required=True)
     p.add_argument("--text", required=True)
-    p.add_argument("--id-type", default="chat_id")
+    p.add_argument("--id-type", default="open_id")
 
     p = sub.add_parser("send-card", help="发送消息卡片")
     p.add_argument("--receive-id", required=True)
     p.add_argument("--card-json", required=True, help="卡片 JSON 字符串或 @file.json 从文件读取")
-    p.add_argument("--id-type", default="chat_id")
+    p.add_argument("--id-type", default="open_id")
 
     p = sub.add_parser("send-image", help="上传并发送图片")
     p.add_argument("--receive-id", required=True)
     p.add_argument("--file", required=True, help="本地图片路径")
-    p.add_argument("--id-type", default="chat_id")
+    p.add_argument("--id-type", default="open_id")
 
     p = sub.add_parser("send-file", help="上传并发送文件")
     p.add_argument("--receive-id", required=True)
     p.add_argument("--file", required=True, help="本地文件路径")
     p.add_argument("--file-type", default="stream", help="opus|mp4|pdf|doc|xls|ppt|stream")
-    p.add_argument("--id-type", default="chat_id")
+    p.add_argument("--id-type", default="open_id")
 
     p = sub.add_parser("get", help="获取单条消息")
     p.add_argument("--message-id", required=True)
@@ -287,7 +287,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("forward", help="转发消息")
     p.add_argument("--message-id", required=True)
     p.add_argument("--receive-id", required=True)
-    p.add_argument("--id-type", default="chat_id")
+    p.add_argument("--id-type", default="open_id")
 
     p = sub.add_parser("reply", help="回复消息")
     p.add_argument("--message-id", required=True)

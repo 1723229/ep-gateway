@@ -23,10 +23,11 @@ metadata:
 发送文本消息。
 
 ```
+python3 scripts/feishu_message.py send --receive-id ou_xxx --text "你好"
 python3 scripts/feishu_message.py send --receive-id oc_xxx --text "你好" --id-type chat_id
 ```
 
-`--id-type` 可选值: chat_id / open_id / union_id / email
+`--id-type` 默认 `open_id`（发群聊时传 `chat_id`）。可选值: chat_id / open_id / union_id / email
 
 ### send-image
 
