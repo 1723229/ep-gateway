@@ -113,6 +113,7 @@ class AgentLoop:
         self._mcp_connected = False
         self._mcp_connecting = False
         self._active_tasks: dict[str, list[asyncio.Task]] = {}  # session_key -> tasks
+        self._pending_archives: list[asyncio.Task] = []
         self._processing_lock = asyncio.Lock()
         self.memory_consolidator = MemoryConsolidator(
             workspace=workspace,
@@ -464,7 +465,10 @@ class AgentLoop:
                 ))
 
     async def close_mcp(self) -> None:
-        """Close MCP connections."""
+        """Drain pending background archives, then close MCP connections."""
+        if self._pending_archives:
+            await asyncio.gather(*self._pending_archives, return_exceptions=True)
+            self._pending_archives.clear()
         if self._mcp_stack:
             try:
                 await self._mcp_stack.aclose()
@@ -517,24 +521,18 @@ class AgentLoop:
         # Slash commands
         cmd = msg.content.strip().lower()
         if cmd == "/new":
-            try:
-                if not await self.memory_consolidator.archive_unconsolidated(session):
-                    return OutboundMessage(
-                        channel=msg.channel,
-                        chat_id=msg.chat_id,
-                        content="Memory archival failed, session not cleared. Please try again.",
-                    )
-            except Exception:
-                logger.exception("/new archival failed for {}", session.key)
-                return OutboundMessage(
-                    channel=msg.channel,
-                    chat_id=msg.chat_id,
-                    content="Memory archival failed, session not cleared. Please try again.",
-                )
-
+            snapshot = session.messages[session.last_consolidated:]
             session.clear()
             self.sessions.save(session)
             self.sessions.invalidate(session.key)
+
+            if snapshot:
+                task = asyncio.create_task(
+                    self.memory_consolidator.archive_messages(snapshot)
+                )
+                self._pending_archives.append(task)
+                task.add_done_callback(self._pending_archives.remove)
+
             return OutboundMessage(channel=msg.channel, chat_id=msg.chat_id,
                                   content="New session started.")
         if cmd == "/help":

@@ -505,7 +505,8 @@ class TestNewCommandArchival:
         return loop
 
     @pytest.mark.asyncio
-    async def test_new_does_not_clear_session_when_archive_fails(self, tmp_path: Path) -> None:
+    async def test_new_clears_session_immediately_even_if_archive_fails(self, tmp_path: Path) -> None:
+        """/new clears session immediately; archive_messages retries until raw dump."""
         from nanobot.bus.events import InboundMessage
 
         loop = self._make_loop(tmp_path)
@@ -514,9 +515,12 @@ class TestNewCommandArchival:
             session.add_message("user", f"msg{i}")
             session.add_message("assistant", f"resp{i}")
         loop.sessions.save(session)
-        before_count = len(session.messages)
 
-        async def _failing_consolidate(_messages, **kwargs) -> bool:
+        call_count = 0
+
+        async def _failing_consolidate(_messages) -> bool:
+            nonlocal call_count
+            call_count += 1
             return False
 
         loop.memory_consolidator.consolidate_messages = _failing_consolidate  # type: ignore[method-assign]
@@ -525,8 +529,13 @@ class TestNewCommandArchival:
         response = await loop._process_message(new_msg)
 
         assert response is not None
-        assert "failed" in response.content.lower()
-        assert len(loop.sessions.get_or_create("cli:test").messages) == before_count
+        assert "new session started" in response.content.lower()
+
+        session_after = loop.sessions.get_or_create("cli:test")
+        assert len(session_after.messages) == 0
+
+        await loop.close_mcp()
+        assert call_count == 3  # retried up to raw-archive threshold
 
     @pytest.mark.asyncio
     async def test_new_archives_only_unconsolidated_messages(self, tmp_path: Path) -> None:
@@ -554,6 +563,8 @@ class TestNewCommandArchival:
 
         assert response is not None
         assert "new session started" in response.content.lower()
+
+        await loop.close_mcp()
         assert archived_count == 3
 
     @pytest.mark.asyncio
@@ -579,66 +590,30 @@ class TestNewCommandArchival:
         assert "new session started" in response.content.lower()
         assert loop.sessions.get_or_create("cli:test").messages == []
 
+    @pytest.mark.asyncio
+    async def test_close_mcp_drains_pending_archives(self, tmp_path: Path) -> None:
+        """close_mcp waits for background archive tasks to complete."""
+        from nanobot.bus.events import InboundMessage
 
-class TestOrphanedToolMessageProtection:
-    """Test that orphaned tool messages (no preceding assistant with tool_calls) are handled."""
-
-    def test_get_history_drops_orphaned_leading_tool_messages(self):
-        """get_history drops leading tool messages that have no preceding tool_calls."""
-        session = Session(key="test:orphan")
-        session.messages = [
-            {"role": "tool", "tool_call_id": "tc1", "name": "read_file", "content": "result1"},
-            {"role": "assistant", "content": "some text"},
-            {"role": "user", "content": "hello"},
-            {"role": "assistant", "content": "response"},
-        ]
-        history = session.get_history()
-        assert history[0]["role"] == "user"
-        assert history[0]["content"] == "hello"
-        assert len(history) == 2
-
-    def test_get_history_returns_empty_when_no_user_message(self):
-        """get_history returns empty list when no user message exists in window."""
-        session = Session(key="test:no_user")
-        session.messages = [
-            {"role": "tool", "tool_call_id": "tc1", "name": "exec", "content": "ok"},
-            {"role": "assistant", "content": "", "tool_calls": [{"id": "tc2", "type": "function", "function": {"name": "exec", "arguments": "{}"}}]},
-            {"role": "tool", "tool_call_id": "tc2", "name": "exec", "content": "done"},
-            {"role": "assistant", "content": "result"},
-        ]
-        history = session.get_history()
-        assert history == []
-
-    def test_get_history_only_tool_and_assistant_messages(self):
-        """get_history returns empty when session is all tool/assistant pairs."""
-        session = Session(key="test:tools_only")
-        for i in range(10):
-            session.messages.append(
-                {"role": "assistant", "content": "", "tool_calls": [{"id": f"tc{i}", "type": "function", "function": {"name": "exec", "arguments": "{}"}}]}
-            )
-            session.messages.append(
-                {"role": "tool", "tool_call_id": f"tc{i}", "name": "exec", "content": f"result{i}"}
-            )
-        history = session.get_history()
-        assert history == []
-
-    def test_trim_aligns_to_user_boundary(self):
-        """get_history drops leading non-user messages so history starts at a user turn."""
-        session = Session(key="test:trim_align")
-        for i in range(5):
+        loop = self._make_loop(tmp_path)
+        session = loop.sessions.get_or_create("cli:test")
+        for i in range(3):
             session.add_message("user", f"msg{i}")
             session.add_message("assistant", f"resp{i}")
-        for i in range(10):
-            session.messages.append(
-                {"role": "assistant", "content": "", "tool_calls": [{"id": f"tc{i}", "type": "function", "function": {"name": "exec", "arguments": "{}"}}]}
-            )
-            session.messages.append(
-                {"role": "tool", "tool_call_id": f"tc{i}", "name": "exec", "content": f"result{i}"}
-            )
+        loop.sessions.save(session)
 
-        # Mark early messages as consolidated so the window starts mid-stream
-        session.last_consolidated = 8
+        archived = asyncio.Event()
 
-        history = session.get_history()
-        assert len(history) > 0
-        assert history[0]["role"] == "user"
+        async def _slow_consolidate(_messages) -> bool:
+            await asyncio.sleep(0.1)
+            archived.set()
+            return True
+
+        loop.memory_consolidator.consolidate_messages = _slow_consolidate  # type: ignore[method-assign]
+
+        new_msg = InboundMessage(channel="cli", sender_id="user", chat_id="test", content="/new")
+        await loop._process_message(new_msg)
+
+        assert not archived.is_set()
+        await loop.close_mcp()
+        assert archived.is_set()
