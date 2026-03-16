@@ -818,7 +818,7 @@ class FeishuChannel(BaseChannel):
 
 
     def _get_user_name_sync(self, open_id: str) -> str:
-        """Look up a user's display name by open_id, with in-memory cache."""
+        """Look up a user's display name by open_id via Contact API, with in-memory cache."""
         if open_id in self._user_name_cache:
             return self._user_name_cache[open_id]
         try:
@@ -1108,7 +1108,7 @@ class FeishuChannel(BaseChannel):
             sender_name = await loop.run_in_executor(
                 None, self._get_user_name_sync, sender_id,
             ) if sender_id != "unknown" else ""
-            
+
             if chat_type == "group" and not self._is_group_message_for_bot(message):
                 logger.debug("Feishu: skipping group message (not mentioned)")
                 return
@@ -1256,6 +1256,7 @@ class FeishuChannel(BaseChannel):
                     "chat_type": chat_type,
                     "msg_type": msg_type,
                     "sender_name": sender_name,
+                    "sender_open_id": sender_id,
                     "parent_id": parent_id,
                     "root_id": root_id,
                 }

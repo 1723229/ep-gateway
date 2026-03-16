@@ -137,7 +137,9 @@ Reply directly with text for conversations. Only use the 'message' tool to send 
         if channel and chat_id:
             lines += [f"Channel: {channel}", f"Chat ID: {chat_id}"]
         if sender_id and sender_name:
-            lines += [f"Sender ID: {sender_id}", f"Sender Name: {sender_name}"]
+            lines += {f"Sender ID: {sender_id}"}
+        if sender_id and sender_name:
+            lines += {f"Sender Name: {sender_name}"}
         return ContextBuilder._RUNTIME_CONTEXT_TAG + "\n" + "\n".join(lines)
 
     def _load_bootstrap_files(self) -> str:
