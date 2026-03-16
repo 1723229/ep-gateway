@@ -814,7 +814,9 @@ def agent(
 def web(
     port: int = typer.Option(18080, "--port", "-p", help="Web server port"),
     host: str = typer.Option("0.0.0.0", "--host", help="Web server host"),
+    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Workspace directory"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    config: str | None = typer.Option(None, "--config", "-c", help="Path to config file"),
 ):
     """Start the web interface with full gateway stack.
 
@@ -822,8 +824,7 @@ def web(
     heartbeat services.  The web channel is force-enabled so the browser
     can communicate via WebSocket.
     """
-    from nanobot.config.loader import load_config
-    from nanobot.config.paths import get_data_dir
+    from nanobot.config.paths import get_cron_dir
     from nanobot.bus.queue import MessageBus
     from nanobot.agent.loop import AgentLoop
     from nanobot.channels.manager import ChannelManager
@@ -836,9 +837,12 @@ def web(
         import logging
         logging.basicConfig(level=logging.DEBUG)
 
-    console.print(f"{__logo__} Starting nanobot web on {host}:{port}...")
+    config = _load_runtime_config(config, workspace)
+    _print_deprecated_memory_window_notice(config)
+    port = port if port is not None else config.channels.web.port
 
-    config = load_config()
+    console.print(f"{__logo__} Starting nanobot web on {host}:{port}...")
+    sync_workspace_templates(config.workspace_path)
 
     # Force-enable web channel with CLI host/port
     config.channels.web.enabled = True
@@ -850,7 +854,7 @@ def web(
     session_manager = SessionManager(config.workspace_path)
 
     cron_cfg = config.gateway.cron
-    cron_store_path = get_data_dir() / "cron" / "jobs.json"
+    cron_store_path = get_cron_dir() / "jobs.json"
     cron = CronService(cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs)
 
     agent = AgentLoop(
