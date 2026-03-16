@@ -195,6 +195,8 @@ class TestCompactHookFiringFromLoop:
 
         assert response is not None
         assert "new session started" in response.content.lower()
+
+        await loop.close_mcp()
         assert len(spy.calls) == 1
         assert spy.calls[0]["session_key"] == "cli:test"
         assert len(spy.calls[0]["messages"]) == 10
@@ -247,7 +249,8 @@ class TestCompactHookFiringFromLoop:
 
         loop.memory_consolidator.store.consolidate = AsyncMock(return_value=True)
 
-        result = await loop.memory_consolidator.archive_unconsolidated(session)
+        chunk = session.messages[session.last_consolidated:]
+        result = await loop.memory_consolidator.archive_messages(chunk, session_key=session.key)
         assert result is True
 
     @pytest.mark.asyncio

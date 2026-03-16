@@ -87,6 +87,8 @@ class Session:
 
         out: list[dict[str, Any]] = []
         for message in sliced:
+            if message.get("role") == "system":
+                continue  # Skip system (prompts, Viking memory) — rebuilt fresh each turn
             entry: dict[str, Any] = {"role": message["role"], "content": message.get("content", "")}
             for key in ("tool_calls", "tool_call_id", "name"):
                 if key in message:

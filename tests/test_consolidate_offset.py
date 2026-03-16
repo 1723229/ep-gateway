@@ -518,7 +518,7 @@ class TestNewCommandArchival:
 
         call_count = 0
 
-        async def _failing_consolidate(_messages) -> bool:
+        async def _failing_consolidate(_messages, **kwargs) -> bool:
             nonlocal call_count
             call_count += 1
             return False
@@ -604,7 +604,7 @@ class TestNewCommandArchival:
 
         archived = asyncio.Event()
 
-        async def _slow_consolidate(_messages) -> bool:
+        async def _slow_consolidate(_messages, **kwargs) -> bool:
             await asyncio.sleep(0.1)
             archived.set()
             return True

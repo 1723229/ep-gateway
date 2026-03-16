@@ -533,7 +533,7 @@ class AgentLoop:
             self.sessions.invalidate(session.key)
 
             if snapshot:
-                self._schedule_background(self.memory_consolidator.archive_messages(snapshot))
+                self._schedule_background(self.memory_consolidator.archive_messages(snapshot, session_key=session.key))
 
             return OutboundMessage(channel=msg.channel, chat_id=msg.chat_id,
                                   content="New session started.")
@@ -600,6 +600,8 @@ class AgentLoop:
         for m in messages[skip:]:
             entry = dict(m)
             role, content = entry.get("role"), entry.get("content")
+            if role == "system":
+                continue  # skip system messages (prompts, OpenViking memory injection)
             if role == "assistant" and not content and not entry.get("tool_calls"):
                 continue  # skip empty assistant messages — they poison session context
             if role == "tool" and isinstance(content, str) and len(content) > self._TOOL_RESULT_MAX_CHARS:

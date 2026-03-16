@@ -323,12 +323,12 @@ class MemoryConsolidator:
             self._get_tool_definitions(),
         )
 
-    async def archive_messages(self, messages: list[dict[str, object]]) -> bool:
+    async def archive_messages(self, messages: list[dict[str, object]], session_key: str = "") -> bool:
         """Archive messages with guaranteed persistence (retries until raw-dump fallback)."""
         if not messages:
             return True
         for _ in range(self.store._MAX_FAILURES_BEFORE_RAW_ARCHIVE):
-            if await self.consolidate_messages(messages):
+            if await self.consolidate_messages(messages, session_key=session_key):
                 return True
         return True
 
