@@ -32,8 +32,27 @@ WORKDIR /app
 
 # Install agent-browser for browser automation
 # Include CJK fonts so headless Chromium renders Chinese text correctly
+# Chrome shared library deps (libglib2.0, etc.) - bookworm-slim lacks these
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends fonts-noto-cjk && \
+    apt-get install -y --no-install-recommends \
+        fonts-noto-cjk \
+        libglib2.0-0 \
+        libnss3 \
+        libx11-xcb1 \
+        libgbm1 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdbus-1-3 \
+        libdrm2 \
+        libxkbcommon0 \
+        libasound2 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libatspi2.0-0 && \
     rm -rf /var/lib/apt/lists/* && \
     npm install -g agent-browser && \
     agent-browser install --with-deps
