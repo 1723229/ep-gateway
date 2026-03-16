@@ -91,15 +91,17 @@ python3 scripts/feishu_bitable.py daily-query --limit 500 --filter 'CurrentValue
 python3 scripts/feishu_bitable.py daily-query --limit 200 --page-token xxx --app-token bascnXXX --table-id tblXXX
 ```
 
-### bitable_add_task / bitable_query_tasks
+### bitable_add_task / bitable_query_tasks / bitable_update_task
 
-录入任务、查询任务。`--project` 为项目 record_id，`--executor` 为执行人 open_id。
+录入任务、查询任务、更新任务。`--project` 为项目 record_id，`--executor` 为执行人 open_id。
 
 ```
 python3 scripts/feishu_bitable.py task-add --name "任务名" --project recXXX --executor ou_xxx --status 待处理 --deadline 7
 python3 scripts/feishu_bitable.py task-query --limit 200
 python3 scripts/feishu_bitable.py task-query --limit 500 --filter 'CurrentValue.[状态]="进行中"'
-python3 scripts/feishu_bitable.py task-query --limit 200 --page-token xxx --table tblXXX --app-token bascnXXX
+python3 scripts/feishu_bitable.py task-query --status 进行中 --executor ou_xxx --deadline-before 2026-03-20 --deadline-after 2026-03-01
+python3 scripts/feishu_bitable.py task-update --record-id recXXX --status 进行中 --description "更新说明" --deadline 2026-03-25
+python3 scripts/feishu_bitable.py task-complete --record-id recXXX
 ```
 
 ## 智能字段转换
@@ -138,4 +140,4 @@ python3 scripts/feishu_bitable.py task-query --limit 200 --page-token xxx --tabl
 
 ## 测试
 
-运行 `python test_feishu_bitable.py` 可测试本技能全部 14 个函数。
+运行 `python test_feishu_bitable.py` 可测试本技能全部函数（含 deadline 查询、update_task）。

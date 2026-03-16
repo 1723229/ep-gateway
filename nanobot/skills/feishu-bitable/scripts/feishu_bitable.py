@@ -397,6 +397,14 @@ def _build_filter(*parts: Optional[str]) -> Optional[str]:
     return "&&".join(f"({p})" for p in valid)
 
 
+def _date_to_timestamp_ms(date_str: str, end_of_day: bool = False) -> int:
+    """YYYY-MM-DD -> 毫秒时间戳（UTC+8）。end_of_day=True 为当天 23:59:59"""
+    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=_CN_TZ)
+    if end_of_day:
+        dt = dt.replace(hour=23, minute=59, second=59, microsecond=999000)
+    return int(dt.timestamp() * 1000)
+
+
 def bitable_query_daily_reports(
     page_size: int = 20,
     filter_expr: Optional[str] = None,
@@ -480,6 +488,8 @@ def bitable_query_tasks(
     app_token: str = BITABLE_APP_TOKEN,
     status: Optional[str] = None,
     executor_id: Optional[str] = None,
+    deadline_before: Optional[str] = None,
+    deadline_after: Optional[str] = None,
 ) -> Dict[str, Any]:
     """查询任务记录
 
@@ -491,12 +501,20 @@ def bitable_query_tasks(
         app_token: 多维表格 app_token
         status: 按状态筛选，如 "进行中"、"待处理"、"完成"
         executor_id: 按执行人 open_id 筛选
+        deadline_before: 截止日期早于等于该日期，如 "2026-03-20"
+        deadline_after: 截止日期晚于等于该日期，如 "2026-03-01"
     """
     parts = []
     if status:
         parts.append(f'CurrentValue.[状态] = "{status}"')
     if executor_id:
         parts.append(f'CurrentValue.[执行人].contains("{executor_id}")')
+    if deadline_before:
+        ts = _date_to_timestamp_ms(deadline_before, end_of_day=True)
+        parts.append(f"CurrentValue.[计划截止时间] <= {ts}")
+    if deadline_after:
+        ts = _date_to_timestamp_ms(deadline_after, end_of_day=False)
+        parts.append(f"CurrentValue.[计划截止时间] >= {ts}")
     if filter_expr:
         parts.append(filter_expr)
     final_filter = _build_filter(*parts) if parts else None
@@ -511,6 +529,47 @@ def bitable_complete_task(
 ) -> Dict[str, Any]:
     """将任务标记为完成（更新状态为「完成」）"""
     return bitable_update_record_smart(app_token, table_id, record_id, {"状态": "完成"})
+
+
+def bitable_update_task(
+    record_id: str,
+    *,
+    status: Optional[str] = None,
+    executor_id: Optional[str] = None,
+    deadline: Optional[str] = None,
+    task_name: Optional[str] = None,
+    description: Optional[str] = None,
+    estimated_hours: Optional[int] = None,
+    table_id: str = TASK_TABLE_ID,
+    app_token: str = BITABLE_APP_TOKEN,
+) -> Dict[str, Any]:
+    """更新任务（仅更新传入的字段）
+
+    Args:
+        record_id: 任务 record_id
+        status: 状态（待处理/进行中/完成）
+        executor_id: 执行人 open_id
+        deadline: 计划截止日期，如 "2026-03-20"
+        task_name: 任务名称
+        description: 说明
+        estimated_hours: 预计耗时
+    """
+    fields: Dict[str, Any] = {}
+    if status is not None:
+        fields["状态"] = status
+    if executor_id is not None:
+        fields["执行人"] = executor_id
+    if deadline is not None:
+        fields["计划截止时间"] = _date_to_timestamp_ms(deadline, end_of_day=True)
+    if task_name is not None:
+        fields["任务名称"] = task_name
+    if description is not None:
+        fields["说明"] = description
+    if estimated_hours is not None:
+        fields["预计耗时"] = estimated_hours
+    if not fields:
+        raise ValueError("至少传入一个要更新的字段")
+    return bitable_update_record_smart(app_token, table_id, record_id, fields)
 
 
 def bitable_list_projects(
@@ -619,7 +678,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--filter", default="", help="过滤表达式")
     p.add_argument("--status", default="", help="按状态筛选：待处理/进行中/完成")
     p.add_argument("--executor", default="", help="按执行人 open_id 筛选")
+    p.add_argument("--deadline-before", default="", help="截止日期早于等于，如 2026-03-20")
+    p.add_argument("--deadline-after", default="", help="截止日期晚于等于，如 2026-03-01")
     p.add_argument("--page-token", default="")
+    p.add_argument("--table", default=TASK_TABLE_ID)
+    p.add_argument("--app-token", default=BITABLE_APP_TOKEN)
+
+    p = sub.add_parser("task-update", help="更新任务")
+    p.add_argument("--record-id", required=True)
+    p.add_argument("--status", default="", help="状态：待处理/进行中/完成")
+    p.add_argument("--executor", default="", help="执行人 open_id")
+    p.add_argument("--deadline", default="", help="计划截止日期 YYYY-MM-DD")
+    p.add_argument("--name", default="", help="任务名称")
+    p.add_argument("--description", default="", help="说明")
+    p.add_argument("--hours", type=int, default=None, help="预计耗时")
     p.add_argument("--table", default=TASK_TABLE_ID)
     p.add_argument("--app-token", default=BITABLE_APP_TOKEN)
 
@@ -683,7 +755,26 @@ def _run_cli(args: argparse.Namespace) -> None:
         _pp(bitable_query_tasks(args.limit,
             filter_expr=args.filter or None, page_token=args.page_token or "",
             table_id=args.table, app_token=args.app_token,
-            status=args.status or None, executor_id=args.executor or None))
+            status=args.status or None, executor_id=args.executor or None,
+            deadline_before=args.deadline_before or None,
+            deadline_after=args.deadline_after or None))
+    elif act == "task-update":
+        kw = {"table_id": args.table, "app_token": args.app_token}
+        if args.status:
+            kw["status"] = args.status
+        if args.executor:
+            kw["executor_id"] = args.executor
+        if args.deadline:
+            kw["deadline"] = args.deadline
+        if args.name:
+            kw["task_name"] = args.name
+        if args.description:
+            kw["description"] = args.description
+        if args.hours is not None:
+            kw["estimated_hours"] = args.hours
+        if not any([args.status, args.executor, args.deadline, args.name, args.description, args.hours is not None]):
+            raise ValueError("task-update 需至少指定 --status/--executor/--deadline/--name/--description/--hours 之一")
+        _pp(bitable_update_task(args.record_id, **kw))
     elif act == "task-complete":
         _pp(bitable_complete_task(args.record_id, args.table, args.app_token))
     elif act == "projects":
