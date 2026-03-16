@@ -104,7 +104,10 @@ def create_app(
         provider = _make_provider(config)
         session_manager = SessionManager(config.workspace_path)
         cron_store_path = get_data_dir() / "cron" / "jobs.json"
-        cron_service = CronService(cron_store_path)
+        cron_cfg = config.gateway.cron
+        cron_service = CronService(
+            cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs
+        )
 
         agent = AgentLoop(
             bus=bus,
@@ -113,11 +116,14 @@ def create_app(
             model=config.agents.defaults.model,
             max_iterations=config.agents.defaults.max_tool_iterations,
             context_window_tokens=config.agents.defaults.context_window_tokens,
-            brave_api_key=config.tools.web.search.api_key or None,
+            web_search_config=config.tools.web.search,
+            web_proxy=config.tools.web.proxy or None,
             exec_config=config.tools.exec,
             cron_service=cron_service,
             restrict_to_workspace=config.tools.restrict_to_workspace,
             session_manager=session_manager,
+            mcp_servers=config.tools.mcp_servers,
+            channels_config=config.channels,
             openviking_config=config.openviking,
         )
         app.state.agent = agent
@@ -128,7 +134,10 @@ def create_app(
         session_manager = SessionManager(config.workspace_path)
     if cron_service is None:
         cron_store_path = get_data_dir() / "cron" / "jobs.json"
-        cron_service = CronService(cron_store_path)
+        cron_cfg = config.gateway.cron
+        cron_service = CronService(
+            cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs
+        )
 
     app.state.config = config
     app.state.session_manager = session_manager

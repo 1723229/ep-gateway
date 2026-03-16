@@ -533,7 +533,7 @@ def gateway(
     cron.on_job = on_cron_job
 
     # Create channel manager
-    channels = ChannelManager(config, bus)
+    channels = ChannelManager(config, bus, session_manager=session_manager, cron_service=cron)
 
     def _pick_heartbeat_target() -> tuple[str, str]:
         """Pick a routable channel/chat target for heartbeat-triggered messages."""
@@ -864,7 +864,7 @@ def web(
         model=config.agents.defaults.model,
         max_iterations=config.agents.defaults.max_tool_iterations,
         context_window_tokens=config.agents.defaults.context_window_tokens,
-        brave_api_key=config.tools.web.search.api_key or None,
+        web_search_config=config.tools.web.search,
         web_proxy=config.tools.web.proxy or None,
         exec_config=config.tools.exec,
         cron_service=cron,
@@ -983,7 +983,7 @@ def web(
     if cron_status["jobs"] > 0:
         console.print(f"[green]✓[/green] Cron: {cron_status['jobs']} scheduled jobs")
 
-    console.print(f"[green]✓[/green] Heartbeat: every 30m")
+    console.print(f"[green]✓[/green] Heartbeat: every {hb_cfg.interval_s}s")
 
     async def run():
         try:
@@ -995,6 +995,12 @@ def web(
             )
         except KeyboardInterrupt:
             console.print("\nShutting down...")
+        except Exception:
+            import traceback
+            console.print("\n[red]Error: Web server crashed unexpectedly[/red]")
+            console.print(traceback.format_exc())
+        finally:
+            await agent.close_mcp()
             heartbeat.stop()
             cron.stop()
             agent.stop()

@@ -50,7 +50,16 @@ class ChannelManager:
             if not enabled:
                 continue
             try:
-                channel = cls(section, self.bus)
+                if name == "web":
+                    channel = cls(
+                        section,
+                        self.bus,
+                        session_manager=self.session_manager,
+                        full_config=self.config,
+                        cron_service=self.cron_service,
+                    )
+                else:
+                    channel = cls(section, self.bus)
                 channel.transcription_api_key = groq_key
                 self.channels[name] = channel
                 logger.info("{} channel enabled", cls.display_name)
