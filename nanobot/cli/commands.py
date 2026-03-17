@@ -282,16 +282,15 @@ def onboard():
             save_config(config)
             console.print(f"[green]✓[/green] Config refreshed at {config_path} (existing values preserved)")
     else:
-        save_config(Config())
+        config = Config()
+        save_config(config)
         console.print(f"[green]✓[/green] Created config at {config_path}")
-
     console.print("[dim]Config template now uses `maxTokens` + `contextWindowTokens`; `memoryWindow` is no longer a runtime setting.[/dim]")
 
     _onboard_plugins(config_path)
 
-    # Create workspace
-    workspace = get_workspace_path()
-
+    # Create workspace, preferring the configured workspace path.
+    workspace = get_workspace_path(config.workspace_path)
     if not workspace.exists():
         workspace.mkdir(parents=True, exist_ok=True)
         console.print(f"[green]✓[/green] Created workspace at {workspace}")
@@ -364,6 +363,7 @@ def _make_provider(config: Config):
             api_key=p.api_key if p else "no-key",
             api_base=config.get_api_base(model) or "http://localhost:8000/v1",
             default_model=model,
+            extra_headers=p.extra_headers if p else None,
         )
     # Azure OpenAI: direct Azure OpenAI endpoint with deployment name
     elif provider_name == "azure_openai":
