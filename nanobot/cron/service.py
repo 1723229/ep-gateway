@@ -206,6 +206,7 @@ class CronService:
         self,
         store_path: Path,
         on_job: Callable[[CronJob], Coroutine[Any, Any, str | None]] | None = None,
+        max_concurrent_runs: int = 1,
     ):
         self.store_path = store_path
         self.on_job = on_job
