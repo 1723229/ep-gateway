@@ -23,7 +23,7 @@ class ChannelsConfig(Base):
 
     model_config = ConfigDict(extra="allow")
 
-    send_progress: bool = False  # stream agent's text progress to the channel (avoids duplicate replies)
+    send_progress: bool = False  # stream agent's text progress to the channel
     send_tool_hints: bool = False  # stream tool-call hints (e.g. read_file("…"))
 
 
@@ -124,38 +124,12 @@ class HeartbeatConfig(Base):
     keep_recent_messages: int = 8
 
 
-class CronRetryConfig(Base):
-    """Retry policy for cron jobs."""
-
-    max_attempts: int = 3
-    backoff_ms: list[int] = Field(default_factory=lambda: [30_000, 60_000, 300_000, 900_000, 3_600_000])
-    retry_on: list[str] = Field(default_factory=lambda: ["rate_limit", "network", "server_error"])
-
-
-class CronRunLogConfig(Base):
-    """Run log retention for cron jobs."""
-
-    max_bytes: int = 2_000_000
-    keep_lines: int = 2000
-
-
-class CronConfig(Base):
-    """Cron scheduler configuration."""
-
-    enabled: bool = True
-    max_concurrent_runs: int = 1
-    retry: CronRetryConfig = Field(default_factory=CronRetryConfig)
-    session_retention: str = "24h"
-    run_log: CronRunLogConfig = Field(default_factory=CronRunLogConfig)
-
-
 class GatewayConfig(Base):
     """Gateway/server configuration."""
 
     host: str = "0.0.0.0"
     port: int = 18790
     heartbeat: HeartbeatConfig = Field(default_factory=HeartbeatConfig)
-    cron: CronConfig = Field(default_factory=CronConfig)
 
 
 class WebSearchConfig(Base):

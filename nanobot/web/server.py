@@ -6,6 +6,7 @@ import asyncio
 import json
 import shutil
 import zipfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -84,7 +85,18 @@ def create_app(
     if config is None:
         config = load_config()
 
-    app = FastAPI(title="nanobot", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        _cron: CronService | None = app.state.cron_service
+        _agent = getattr(app.state, "agent", None)
+        # Only start cron here in standalone mode; gateway mode manages its own lifecycle
+        if _agent is not None and _cron is not None:
+            await _cron.start()
+        yield
+        if _agent is not None and _cron is not None:
+            _cron.stop()
+
+    app = FastAPI(title="hiperone", version="0.1.0", lifespan=lifespan)
 
     # CORS for frontend dev server
     app.add_middleware(
@@ -103,11 +115,8 @@ def create_app(
         bus = MessageBus()
         provider = _make_provider(config)
         session_manager = SessionManager(config.workspace_path)
-        cron_store_path = get_data_dir() / "cron" / "jobs.json"
-        cron_cfg = config.gateway.cron
-        cron_service = CronService(
-            cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs
-        )
+        cron_store_path = config.workspace_path / "cron" / "jobs.json"
+        cron_service = CronService(cron_store_path)
 
         agent = AgentLoop(
             bus=bus,
@@ -133,11 +142,8 @@ def create_app(
     if session_manager is None:
         session_manager = SessionManager(config.workspace_path)
     if cron_service is None:
-        cron_store_path = get_data_dir() / "cron" / "jobs.json"
-        cron_cfg = config.gateway.cron
-        cron_service = CronService(
-            cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs
-        )
+        cron_store_path = config.workspace_path / "cron" / "jobs.json"
+        cron_service = CronService(cron_store_path)
 
     app.state.config = config
     app.state.session_manager = session_manager
