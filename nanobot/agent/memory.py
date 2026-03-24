@@ -349,7 +349,7 @@ class MemoryConsolidator:
         async with lock:
             budget = self.context_window_tokens - self.max_completion_tokens - self._SAFETY_BUFFER
             target = budget // 2
-            estimated, source = self.estimate_session_prompt_tokens(session)
+            estimated, source = await self.estimate_session_prompt_tokens(session)
             if estimated <= 0:
                 return
             if estimated < budget:
