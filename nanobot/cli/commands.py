@@ -961,7 +961,6 @@ def web(
         logging.basicConfig(level=logging.DEBUG)
 
     config = _load_runtime_config(config, workspace)
-    _print_deprecated_memory_window_notice(config)
 
     web_cfg = getattr(config.channels, "web", None)
     base = web_cfg if isinstance(web_cfg, dict) else (web_cfg.model_dump() if web_cfg else {})
@@ -1065,6 +1064,8 @@ def web(
         return "cli", "direct"
 
     # Create heartbeat service
+    hb_cfg = config.gateway.heartbeat
+
     async def on_heartbeat_execute(tasks: str) -> str:
         """Phase 2: execute heartbeat tasks through the full agent loop."""
         channel, chat_id = _pick_heartbeat_target()
@@ -1072,13 +1073,19 @@ def web(
         async def _silent(*_args, **_kwargs):
             pass
 
-        return await agent.process_direct(
+        resp = await agent.process_direct(
             tasks,
             session_key="heartbeat",
             channel=channel,
             chat_id=chat_id,
             on_progress=_silent,
         )
+
+        session = agent.sessions.get_or_create("heartbeat")
+        session.retain_recent_legal_suffix(hb_cfg.keep_recent_messages)
+        agent.sessions.save(session)
+
+        return resp.content if resp else ""
 
     async def on_heartbeat_notify(response: str) -> None:
         """Deliver a heartbeat response to the user's channel."""
@@ -1088,7 +1095,6 @@ def web(
             return  # No external channel available to deliver to
         await bus.publish_outbound(OutboundMessage(channel=channel, chat_id=chat_id, content=response))
 
-    hb_cfg = config.gateway.heartbeat
     heartbeat = HeartbeatService(
         workspace=config.workspace_path,
         provider=provider,
@@ -1101,6 +1107,8 @@ def web(
 
     if channels.enabled_channels:
         console.print(f"[green]✓[/green] Channels enabled: {', '.join(channels.enabled_channels)}")
+    else:
+        console.print("[yellow]Warning: No channels enabled[/yellow]")
 
     cron_status = cron.status()
     if cron_status["jobs"] > 0:

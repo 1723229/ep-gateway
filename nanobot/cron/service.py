@@ -12,7 +12,18 @@ from typing import Any, Callable, Coroutine
 
 from loguru import logger
 
-from nanobot.cron.types import CronJob, CronJobState, CronPayload, CronRunRecord, CronSchedule, CronStore
+from nanobot.cron.types import (
+    DEFAULT_BACKOFF_MS,
+    ONE_SHOT_MAX_RETRIES,
+    CronJob,
+    CronJobState,
+    CronPayload,
+    CronRunRecord,
+    CronSchedule,
+    CronStore,
+    DeliveryConfig,
+    classify_error,
+)
 
 
 def _now_ms() -> int:
@@ -489,13 +500,14 @@ class CronService:
             logger.error("Cron: job '{}' failed: {}", job.name, e)
 
         end_ms = _now_ms()
+        elapsed_ms = end_ms - start_ms
         job.state.last_run_at_ms = start_ms
         job.updated_at_ms = end_ms
 
         job.state.run_history.append(CronRunRecord(
             run_at_ms=start_ms,
             status=job.state.last_status,
-            duration_ms=end_ms - start_ms,
+            duration_ms=elapsed_ms,
             error=job.state.last_error,
         ))
         job.state.run_history = job.state.run_history[-self._MAX_RUN_HISTORY:]
@@ -503,14 +515,16 @@ class CronService:
         self._append_run_record(CronRunRecord(
             job_id=job.id,
             timestamp_ms=start_ms,
-            duration_ms=duration_ms,
+            duration_ms=elapsed_ms,
             status=job.state.last_status or "error",
             error=job.state.last_error,
         ))
 
         if job.state.last_status == "ok":
             self._handle_success_scheduling(job)
-        # Backoff scheduling is handled in _apply_backoff
+        elif job.state.last_error:
+            error_class = classify_error(job.state.last_error)
+            self._apply_backoff(job, error_class)
 
     def _apply_backoff(self, job: CronJob, error_class: str) -> None:
         """Apply retry/backoff based on error classification and job type."""

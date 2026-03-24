@@ -74,10 +74,12 @@ class CronPayload:
 @dataclass
 class CronRunRecord:
     """A single execution record for a cron job."""
-    run_at_ms: int
-    status: Literal["ok", "error", "skipped"]
+    run_at_ms: int = 0
+    status: Literal["ok", "error", "skipped"] = "ok"
     duration_ms: int = 0
     error: str | None = None
+    job_id: str = ""
+    timestamp_ms: int = 0
 
 
 @dataclass
@@ -87,6 +89,8 @@ class CronJobState:
     last_run_at_ms: int | None = None
     last_status: Literal["ok", "error", "skipped"] | None = None
     last_error: str | None = None
+    consecutive_errors: int = 0
+    next_retry_at_ms: int | None = None
     run_history: list[CronRunRecord] = field(default_factory=list)
 
 
