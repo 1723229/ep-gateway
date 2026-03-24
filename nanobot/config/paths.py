@@ -40,6 +40,13 @@ def get_workspace_path(workspace: str | None = None) -> Path:
     return ensure_dir(path)
 
 
+def is_default_workspace(workspace: str | Path | None) -> bool:
+    """Return whether a workspace resolves to the default workspace path."""
+    current = Path(workspace).expanduser() if workspace is not None else Path.home() / ".hiperone" / "workspace"
+    default = Path.home() / ".hiperone" / "workspace"
+    return current.resolve(strict=False) == default.resolve(strict=False)
+
+
 def get_cli_history_path() -> Path:
     """Return the shared CLI history file path."""
     return Path.home() / ".hiperone" / "history" / "cli_history"

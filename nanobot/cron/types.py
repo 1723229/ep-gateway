@@ -31,7 +31,7 @@ def classify_error(error_msg: str) -> Literal["transient", "permanent"]:
         return "permanent"
     if any(kw in lower for kw in TRANSIENT_ERROR_KEYWORDS):
         return "transient"
-    return "permanent"
+    return "transient"
 
 
 @dataclass
@@ -115,5 +115,5 @@ class CronJob:
 @dataclass
 class CronStore:
     """Persistent store for cron jobs."""
-    version: int = 2
+    version: int = 1
     jobs: list[CronJob] = field(default_factory=list)

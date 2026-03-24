@@ -34,7 +34,7 @@ from rich.text import Text
 
 from nanobot import __logo__, __version__
 from nanobot.cli.stream import StreamRenderer, ThinkingSpinner
-from nanobot.config.paths import get_workspace_path
+from nanobot.config.paths import get_workspace_path, is_default_workspace
 from nanobot.config.schema import Config, WebConfig
 from nanobot.utils.helpers import sync_workspace_templates
 
@@ -479,6 +479,17 @@ def _warn_deprecated_config_keys(config_path: Path | None) -> None:
         )
 
 
+def _migrate_cron_store(config: "Config") -> None:
+    """One-time migration: move legacy global cron store into the workspace."""
+    from nanobot.config.paths import get_cron_dir
+
+    legacy_path = get_cron_dir() / "jobs.json"
+    new_path = config.workspace_path / "cron" / "jobs.json"
+    if legacy_path.is_file() and not new_path.exists():
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.move(str(legacy_path), str(new_path))
+
 
 # ============================================================================
 # Gateway / Server
@@ -496,7 +507,6 @@ def gateway(
     from nanobot.agent.loop import AgentLoop
     from nanobot.bus.queue import MessageBus
     from nanobot.channels.manager import ChannelManager
-    from nanobot.config.paths import get_cron_dir
     from nanobot.cron.service import CronService
     from nanobot.cron.types import CronJob
     from nanobot.heartbeat.service import HeartbeatService
@@ -515,10 +525,12 @@ def gateway(
     provider = _make_provider(config)
     session_manager = SessionManager(config.workspace_path)
 
-    # Create cron service first (callback set after agent creation)
-    # Use workspace path for per-instance cron store
+    if is_default_workspace(config.workspace_path):
+        _migrate_cron_store(config)
+
+    # Create cron service with workspace-scoped store
     cron_cfg = config.gateway.cron
-    cron_store_path = get_cron_dir() / "jobs.json"
+    cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs)
 
     # Create agent with cron service
@@ -572,7 +584,8 @@ def gateway(
         response = resp.content if resp else ""
 
         message_tool = agent.tools.get("message")
-        already_sent = isinstance(message_tool, MessageTool) and message_tool._sent_in_turn
+        if isinstance(message_tool, MessageTool) and message_tool._sent_in_turn:
+            return response
 
         if job.payload.deliver and job.payload.to and response:
             should_notify = await evaluate_response(
@@ -586,29 +599,6 @@ def gateway(
                     content=response,
                 ))
         return response
-
-    async def _run_main_session_job(job: CronJob) -> str | None:
-        """Inject a system event into the heartbeat cycle."""
-        event_text = (
-            f"[Scheduled Event: {job.name}]\n"
-            f"{job.payload.message}"
-        )
-        if job.wake_mode == "now" and heartbeat:
-            return await on_heartbeat_execute(event_text)
-        return event_text
-
-    async def _webhook_deliver(url: str, content: str, job: CronJob) -> None:
-        """POST job output to a webhook URL."""
-        import aiohttp
-        try:
-            payload = {"jobId": job.id, "name": job.name, "content": content}
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=30)):
-                    pass
-        except Exception as e:
-            if not job.delivery.best_effort:
-                raise
-            logger.warning("Cron: webhook delivery failed for '{}': {}", job.name, e)
 
     cron.on_job = on_cron_job
 
@@ -730,7 +720,6 @@ def agent(
 
     from nanobot.agent.loop import AgentLoop
     from nanobot.bus.queue import MessageBus
-    from nanobot.config.paths import get_cron_dir
     from nanobot.cron.service import CronService
 
     config = _load_runtime_config(config, workspace)
@@ -739,8 +728,11 @@ def agent(
     bus = MessageBus()
     provider = _make_provider(config)
 
-    # Create cron service for tool usage (no callback needed for CLI unless running)
-    cron_store_path = get_cron_dir() / "jobs.json"
+    if is_default_workspace(config.workspace_path):
+        _migrate_cron_store(config)
+
+    # Create cron service with workspace-scoped store
+    cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path)
 
     if logs:
@@ -947,7 +939,6 @@ def web(
     heartbeat services.  The web channel is force-enabled so the browser
     can communicate via WebSocket.
     """
-    from nanobot.config.paths import get_cron_dir
     from nanobot.bus.queue import MessageBus
     from nanobot.agent.loop import AgentLoop
     from nanobot.channels.manager import ChannelManager
@@ -975,8 +966,11 @@ def web(
     provider = _make_provider(config)
     session_manager = SessionManager(config.workspace_path)
 
+    if is_default_workspace(config.workspace_path):
+        _migrate_cron_store(config)
+
     cron_cfg = config.gateway.cron
-    cron_store_path = get_cron_dir() / "jobs.json"
+    cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path, max_concurrent_runs=cron_cfg.max_concurrent_runs)
 
     agent = AgentLoop(

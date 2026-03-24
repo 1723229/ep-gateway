@@ -3,7 +3,6 @@
 import asyncio
 import hashlib
 import json
-import re
 import time
 import uuid
 from datetime import datetime
@@ -28,9 +27,6 @@ from nanobot.cron.types import (
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
-
-
-_TOP_OF_HOUR_RE = re.compile(r"^0\s")
 
 
 def _is_top_of_hour_expr(expr: str) -> bool:
@@ -140,6 +136,15 @@ def _job_to_dict(j: CronJob) -> dict:
             "lastError": j.state.last_error,
             "consecutiveErrors": j.state.consecutive_errors,
             "nextRetryAtMs": j.state.next_retry_at_ms,
+            "runHistory": [
+                {
+                    "runAtMs": r.run_at_ms,
+                    "status": r.status,
+                    "durationMs": r.duration_ms,
+                    "error": r.error,
+                }
+                for r in j.state.run_history
+            ],
         },
         "sessionTarget": j.session_target,
         "wakeMode": j.wake_mode,
@@ -198,6 +203,15 @@ def _job_from_dict(j: dict) -> CronJob:
             last_error=state_data.get("lastError"),
             consecutive_errors=state_data.get("consecutiveErrors", 0),
             next_retry_at_ms=state_data.get("nextRetryAtMs"),
+            run_history=[
+                CronRunRecord(
+                    run_at_ms=r["runAtMs"],
+                    status=r["status"],
+                    duration_ms=r.get("durationMs", 0),
+                    error=r.get("error"),
+                )
+                for r in state_data.get("runHistory", [])
+            ],
         ),
         session_target=j.get("sessionTarget", "isolated"),
         wake_mode=j.get("wakeMode", "now"),
@@ -244,45 +258,7 @@ class CronService:
         if self.store_path.exists():
             try:
                 data = json.loads(self.store_path.read_text(encoding="utf-8"))
-                jobs = []
-                for j in data.get("jobs", []):
-                    jobs.append(CronJob(
-                        id=j["id"],
-                        name=j["name"],
-                        enabled=j.get("enabled", True),
-                        schedule=CronSchedule(
-                            kind=j["schedule"]["kind"],
-                            at_ms=j["schedule"].get("atMs"),
-                            every_ms=j["schedule"].get("everyMs"),
-                            expr=j["schedule"].get("expr"),
-                            tz=j["schedule"].get("tz"),
-                        ),
-                        payload=CronPayload(
-                            kind=j["payload"].get("kind", "agent_turn"),
-                            message=j["payload"].get("message", ""),
-                            deliver=j["payload"].get("deliver", False),
-                            channel=j["payload"].get("channel"),
-                            to=j["payload"].get("to"),
-                        ),
-                        state=CronJobState(
-                            next_run_at_ms=j.get("state", {}).get("nextRunAtMs"),
-                            last_run_at_ms=j.get("state", {}).get("lastRunAtMs"),
-                            last_status=j.get("state", {}).get("lastStatus"),
-                            last_error=j.get("state", {}).get("lastError"),
-                            run_history=[
-                                CronRunRecord(
-                                    run_at_ms=r["runAtMs"],
-                                    status=r["status"],
-                                    duration_ms=r.get("durationMs", 0),
-                                    error=r.get("error"),
-                                )
-                                for r in j.get("state", {}).get("runHistory", [])
-                            ],
-                        ),
-                        created_at_ms=j.get("createdAtMs", 0),
-                        updated_at_ms=j.get("updatedAtMs", 0),
-                        delete_after_run=j.get("deleteAfterRun", False),
-                    ))
+                jobs = [_job_from_dict(j) for j in data.get("jobs", [])]
                 self._store = CronStore(jobs=jobs)
             except Exception as e:
                 logger.warning("Failed to load cron store: {}", e)
@@ -301,46 +277,7 @@ class CronService:
 
         data = {
             "version": self._store.version,
-            "jobs": [
-                {
-                    "id": j.id,
-                    "name": j.name,
-                    "enabled": j.enabled,
-                    "schedule": {
-                        "kind": j.schedule.kind,
-                        "atMs": j.schedule.at_ms,
-                        "everyMs": j.schedule.every_ms,
-                        "expr": j.schedule.expr,
-                        "tz": j.schedule.tz,
-                    },
-                    "payload": {
-                        "kind": j.payload.kind,
-                        "message": j.payload.message,
-                        "deliver": j.payload.deliver,
-                        "channel": j.payload.channel,
-                        "to": j.payload.to,
-                    },
-                    "state": {
-                        "nextRunAtMs": j.state.next_run_at_ms,
-                        "lastRunAtMs": j.state.last_run_at_ms,
-                        "lastStatus": j.state.last_status,
-                        "lastError": j.state.last_error,
-                        "runHistory": [
-                            {
-                                "runAtMs": r.run_at_ms,
-                                "status": r.status,
-                                "durationMs": r.duration_ms,
-                                "error": r.error,
-                            }
-                            for r in j.state.run_history
-                        ],
-                    },
-                    "createdAtMs": j.created_at_ms,
-                    "updatedAtMs": j.updated_at_ms,
-                    "deleteAfterRun": j.delete_after_run,
-                }
-                for j in self._store.jobs
-            ]
+            "jobs": [_job_to_dict(j) for j in self._store.jobs],
         }
 
         self.store_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -585,14 +522,6 @@ class CronService:
         store = self._load_store()
         jobs = store.jobs if include_disabled else [j for j in store.jobs if j.enabled]
         return sorted(jobs, key=lambda j: j.state.next_run_at_ms or float('inf'))
-
-    def get_job(self, job_id: str) -> CronJob | None:
-        """Get a single job by ID."""
-        store = self._load_store()
-        for job in store.jobs:
-            if job.id == job_id:
-                return job
-        return None
 
     def add_job(
         self,
