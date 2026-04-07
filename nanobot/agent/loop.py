@@ -346,6 +346,7 @@ class AgentLoop:
             self.tools.register(OVMemoryCommitTool(
                 ov_config=self.openviking_config,
                 session_key_fn=lambda: self._current_session_key,
+                background_task_scheduler=self._schedule_background,
             ))
             logger.info("Registered {} OpenViking tools", 8)
         except Exception:

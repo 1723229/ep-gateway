@@ -16,11 +16,13 @@ from loguru import logger
 try:
     import openviking as ov
     from openviking.message.part import Part, TextPart, ToolPart
+    from openviking_cli.session.user_id import UserIdentifier
 
     HAS_OPENVIKING = True
 except Exception:
     HAS_OPENVIKING = False
     ov = None  # type: ignore[assignment]
+    UserIdentifier = None  # type: ignore[assignment]
 
 
 class VikingClient:
@@ -33,6 +35,7 @@ class VikingClient:
         data_dir: str = "",
         server_url: str = "",
         api_key: str = "",
+        account_id: str = "",
         user_id: str = "",
         agent_id: str | None = None,
         vlm_api_key: str = "",
@@ -48,6 +51,7 @@ class VikingClient:
             raise RuntimeError("openviking package is not installed. Install with: pip install openviking")
 
         self.mode = mode
+        self.account_id = account_id or "default"
         self.user_id = user_id or "default"
         self.agent_id = agent_id or "default"
         self.memory_recall_limit = memory_recall_limit
@@ -69,15 +73,24 @@ class VikingClient:
 
             self.client = ov.AsyncOpenViking(path=str(ov_data_path))
             self.agent_space_name = self.client.user.agent_space_name()
+            if self.user_id != "default" or self.agent_id != "default":
+                logger.info(
+                    "OpenViking local mode uses the SDK default user scope; configured user_id/agent_id are ignored"
+                )
         else:
             self.client = ov.AsyncHTTPClient(
                 url=server_url,
                 api_key=api_key,
-                agent_id=agent_id,
+                user_id=self.user_id,
+                agent_id=self.agent_id,
+                account=self.account_id,
+                user=self.user_id,
             )
-            self.agent_space_name = hashlib.md5(
-                (self.user_id + (agent_id or "")).encode()
-            ).hexdigest()[:12]
+            self.agent_space_name = self._derive_agent_space_name(
+                account_id=self.account_id,
+                user_id=self.user_id,
+                agent_id=self.agent_id,
+            )
 
         self._commit_semaphore = asyncio.Semaphore(1)
 
@@ -122,17 +135,22 @@ class VikingClient:
             "storage": {"workspace": workspace},
         }
 
-        if embedding_model and embedding_api_key and embedding_base_url:
+        if embedding_model and (embedding_api_key or embedding_base_url):
             config_dict["embedding"] = {
                 "dense": {
                     "provider": "openai",
                     "model": embedding_model,
-                    "api_key": embedding_api_key,
-                    "api_base": embedding_base_url,
+                    "api_key": embedding_api_key or None,
+                    "api_base": embedding_base_url or None,
                     "dimension": embedding_dimension,
                     "batch_size": 32,
                 }
             }
+        else:
+            raise RuntimeError(
+                "OpenViking local mode on 0.3.3 requires embedding_model and embedding_api_key or embedding_base_url, "
+                "unless an ov.conf file is already present."
+            )
 
         if vlm_api_key and vlm_base_url and vlm_model:
             config_dict["vlm"] = {
@@ -156,6 +174,7 @@ class VikingClient:
         data_dir: str = "",
         server_url: str = "",
         api_key: str = "",
+        account_id: str = "",
         user_id: str = "",
         agent_id: str | None = None,
         vlm_api_key: str = "",
@@ -173,6 +192,7 @@ class VikingClient:
             data_dir=data_dir,
             server_url=server_url,
             api_key=api_key,
+            account_id=account_id,
             user_id=user_id,
             agent_id=agent_id,
             vlm_api_key=vlm_api_key,
@@ -192,20 +212,34 @@ class VikingClient:
         """Create a VikingClient from the global nanobot config."""
         from nanobot.config.loader import load_config
 
-        cfg = load_config().openviking
+        config = load_config()
+        cfg = config.openviking
+        embedding_api_key, embedding_base_url = cls._resolve_provider_credentials(
+            config=config,
+            model=cfg.embedding_model,
+            api_key=cfg.embedding_api_key,
+            api_base=cfg.embedding_base_url,
+        )
+        vlm_api_key, vlm_base_url = cls._resolve_provider_credentials(
+            config=config,
+            model=cfg.vlm_model,
+            api_key=cfg.vlm_api_key,
+            api_base=cfg.vlm_base_url,
+        )
         return await cls.create(
             mode=cfg.mode,
             data_dir=cfg.data_dir,
             server_url=cfg.server_url,
             api_key=cfg.api_key,
+            account_id=getattr(cfg, "account_id", ""),
             user_id=cfg.user_id,
             agent_id=agent_id,
-            vlm_api_key=cfg.vlm_api_key,
-            vlm_base_url=cfg.vlm_base_url,
+            vlm_api_key=vlm_api_key,
+            vlm_base_url=vlm_base_url,
             vlm_model=cfg.vlm_model,
             embedding_model=cfg.embedding_model,
-            embedding_api_key=cfg.embedding_api_key,
-            embedding_base_url=cfg.embedding_base_url,
+            embedding_api_key=embedding_api_key,
+            embedding_base_url=embedding_base_url,
             embedding_dimension=cfg.embedding_dimension,
             memory_recall_limit=cfg.memory_recall_limit,
         )
@@ -219,10 +253,7 @@ class VikingClient:
         if self.mode == "local":
             return True
         try:
-            from nanobot.config.loader import load_config
-            cfg = load_config().openviking
-            account_id = getattr(cfg, "account_id", "") or "default"
-            res = await self.client.admin_list_users(account_id)
+            res = await self.client.admin_list_users(self.account_id)
             if not res:
                 return False
             return any(u.get("user_id") == user_id for u in res)
@@ -235,11 +266,8 @@ class VikingClient:
         if self.mode == "local":
             return True
         try:
-            from nanobot.config.loader import load_config
-            cfg = load_config().openviking
-            account_id = getattr(cfg, "account_id", "") or "default"
             await self.client.admin_register_user(
-                account_id=account_id, user_id=user_id, role=role,
+                account_id=self.account_id, user_id=user_id, role=role,
             )
             return True
         except Exception as e:
@@ -260,6 +288,37 @@ class VikingClient:
     # Search & find
     # ------------------------------------------------------------------
 
+    def _effective_user_id(self, sender_id: str = "") -> str:
+        if self.mode == "local":
+            user = getattr(self.client, "user", None)
+            if user and hasattr(user, "user_space_name"):
+                return user.user_space_name()
+            return "default"
+        return sender_id or self.user_id
+
+    @staticmethod
+    def _derive_agent_space_name(account_id: str, user_id: str, agent_id: str) -> str:
+        if UserIdentifier is not None:
+            return UserIdentifier(account_id, user_id, agent_id).agent_space_name()
+        return hashlib.md5(f"{user_id}:{agent_id}".encode()).hexdigest()[:12]
+
+    @staticmethod
+    def _resolve_provider_credentials(
+        *,
+        config: Any,
+        model: str,
+        api_key: str,
+        api_base: str,
+    ) -> tuple[str, str]:
+        if not model or (api_key and api_base):
+            return api_key, api_base
+
+        provider = config.get_provider(model)
+        if provider is None:
+            return api_key, api_base
+
+        return api_key or (provider.api_key or ""), api_base or (provider.api_base or "")
+
     async def find(self, query: str, target_uri: str | None = None, limit: int = 10) -> Any:
         if target_uri:
             return await self.client.find(query, target_uri=target_uri, limit=limit)
@@ -277,7 +336,7 @@ class VikingClient:
         }
 
     async def search_user_memory(self, query: str, sender_id: str = "") -> list[dict[str, Any]]:
-        uid = sender_id or self.user_id
+        uid = self._effective_user_id(sender_id)
         if not await self._ensure_user(uid):
             return []
         uri = f"viking://user/{uid}/memories/"
@@ -286,10 +345,11 @@ class VikingClient:
 
     async def search_memory(self, query: str, limit: int = 10) -> dict[str, list[Any]]:
         """Search both user and agent memories."""
-        if not await self._ensure_user(self.user_id):
+        uid = self._effective_user_id()
+        if not await self._ensure_user(uid):
             return {"user_memory": [], "agent_memory": []}
 
-        uri_user = f"viking://user/{self.user_id}/memories/"
+        uri_user = f"viking://user/{uid}/memories/"
         user_result = await self.client.find(query=query, target_uri=uri_user, limit=limit)
 
         uri_agent = f"viking://agent/{self.agent_space_name}/memories/"
@@ -307,8 +367,14 @@ class VikingClient:
     async def add_resource(
         self, local_path: str, desc: str, target_path: str = "", wait: bool = False,
     ) -> dict[str, Any] | None:
+        kwargs: dict[str, Any] = {}
+        if target_path:
+            if target_path.endswith("/"):
+                kwargs["parent"] = target_path
+            else:
+                kwargs["to"] = target_path
         result = await self.client.add_resource(
-            path=local_path, reason=desc, target_path=target_path or None, wait=wait,
+            path=local_path, reason=desc, wait=wait, **kwargs,
         )
         return result
 
@@ -387,17 +453,21 @@ class VikingClient:
     ) -> dict[str, Any]:
         """Commit a single batch of messages (at most ``_COMMIT_BATCH_SIZE``)."""
         async with self._commit_semaphore:
-            uid = sender_id or self.user_id
+            uid = self._effective_user_id(sender_id)
             if not await self._ensure_user(uid):
                 return {"success": False, "error": "Failed to initialize user"}
 
             actual_sid = session_id
-            if hasattr(self.client, "create_session"):
+            if hasattr(self.client, "get_session"):
                 try:
-                    res = await self.client.create_session()
-                    actual_sid = res["session_id"]
+                    await self.client.get_session(actual_sid, auto_create=True)
                 except Exception:
-                    logger.debug("create_session unavailable, falling back to provided session_id")
+                    logger.debug("get_session(auto_create=True) unavailable, falling back to create_session")
+                    if hasattr(self.client, "create_session"):
+                        try:
+                            await self.client.create_session(actual_sid)
+                        except Exception:
+                            logger.debug("create_session({}) failed; continuing with session()", actual_sid)
 
             session = self.client.session(actual_sid)
 
@@ -447,9 +517,9 @@ class VikingClient:
 
                 if not parts:
                     continue
-                session.add_message(role=role, parts=parts)
+                await session.add_message(role=role, parts=parts)
 
-            result = await asyncio.to_thread(session.commit)
+            result = await session.commit()
             logger.debug("Committed {} messages to OpenViking session {}", len(messages), actual_sid)
             status = result.get("status", False)
             return {"success": status is True or status == "committed"}
@@ -474,10 +544,11 @@ class VikingClient:
 
     async def get_viking_user_profile(self) -> str:
         start = time.perf_counter()
-        if not await self._ensure_user(self.user_id):
+        uid = self._effective_user_id()
+        if not await self._ensure_user(uid):
             return ""
         content = await self.read_content(
-            uri=f"viking://user/{self.user_id}/memories/profile.md", level="read"
+            uri=f"viking://user/{uid}/memories/profile.md", level="read"
         )
         cost = time.perf_counter() - start
         logger.info("[READ_USER_PROFILE]: cost {:.2f}s, profile={}", cost, "yes" if content else "none")
@@ -553,11 +624,29 @@ class VikingClient:
         return "\n".join(lines)
 
     async def aclose(self) -> None:
+        if self.mode == "local" and ov is not None and hasattr(ov.AsyncOpenViking, "reset"):
+            await ov.AsyncOpenViking.reset()
+            return
         if hasattr(self.client, "close"):
             result = self.client.close()
             if hasattr(result, "__await__"):
                 await result
 
     def close(self) -> None:
+        if self.mode == "local" and ov is not None and hasattr(ov.AsyncOpenViking, "reset"):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(ov.AsyncOpenViking.reset())
+            else:
+                loop.create_task(ov.AsyncOpenViking.reset())
+            return
         if hasattr(self.client, "close"):
-            self.client.close()
+            result = self.client.close()
+            if hasattr(result, "__await__"):
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    asyncio.run(result)
+                else:
+                    loop.create_task(result)

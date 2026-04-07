@@ -90,6 +90,7 @@ class OpenVikingConfig(Base):
     enabled: bool = False
     mode: str = "local"  # "local" (embedded) or "remote" (HTTP server)
     server_url: str = ""
+    account_id: str = ""
     user_id: str = ""
     api_key: str = ""
     data_dir: str = "~/.hiperone/openviking"

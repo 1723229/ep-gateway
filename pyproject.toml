@@ -53,7 +53,7 @@ dependencies = [
     "dulwich>=0.22.0,<1.0.0",
     "fastapi>=0.115.0,<1.0.0",
     "uvicorn[standard]>=0.34.0,<1.0.0",
-    "openviking>=0.1.18",
+    "openviking>=0.3.3",
 ]
 
 [project.optional-dependencies]
@@ -74,7 +74,7 @@ matrix = [
     "nh3>=0.2.17,<1.0.0",
 ]
 openviking = [
-    "openviking>=0.1.18",
+    "openviking>=0.3.3",
 ]
 discord = [
     "discord.py>=2.5.2,<3.0.0",
@@ -104,7 +104,6 @@ allow-direct-references = true
 include = [
     "nanobot/**/*.py",
     "nanobot/templates/**/*.md",
-    "nanobot/templates/.learnings/*.md",
     "nanobot/skills/**/*.md",
     "nanobot/skills/**/*.sh",
 ]

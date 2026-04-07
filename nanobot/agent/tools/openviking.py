@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any, Optional
 
@@ -186,8 +187,9 @@ class OVGrepTool(_OVTool):
             client = await self._client()
             result = await client.grep(uri, pattern, case_insensitive=case_insensitive)
             if isinstance(result, dict):
-                matches = result.get("result", {}).get("matches", [])
-                count = result.get("result", {}).get("count", 0)
+                payload = result.get("result", result)
+                matches = payload.get("matches", [])
+                count = payload.get("count", 0)
             else:
                 matches = getattr(result, "matches", [])
                 count = getattr(result, "count", 0)
@@ -235,10 +237,11 @@ class OVGlobTool(_OVTool):
     async def execute(self, pattern: str, uri: str = "", **kwargs: Any) -> str:
         try:
             client = await self._client()
-            result = await client.glob(pattern, uri=uri or None)
+            result = await client.glob(pattern, uri=uri or "viking://")
             if isinstance(result, dict):
-                matches = result.get("result", {}).get("matches", [])
-                count = result.get("result", {}).get("count", 0)
+                payload = result.get("result", result)
+                matches = payload.get("matches", [])
+                count = payload.get("count", 0)
             else:
                 matches = getattr(result, "matches", [])
                 count = getattr(result, "count", 0)
@@ -292,9 +295,17 @@ class OVUserMemorySearchTool(_OVTool):
 class OVMemoryCommitTool(_OVTool):
     """Commit messages to OpenViking session for persistent memory."""
 
-    def __init__(self, ov_config: Any = None, session_key_fn: Any = None):
+    _pending_tasks: set[asyncio.Task[Any]] = set()
+
+    def __init__(
+        self,
+        ov_config: Any = None,
+        session_key_fn: Any = None,
+        background_task_scheduler: Any = None,
+    ):
         super().__init__(ov_config)
         self._session_key_fn = session_key_fn
+        self._background_task_scheduler = background_task_scheduler
 
     @property
     def name(self) -> str:
@@ -333,11 +344,46 @@ class OVMemoryCommitTool(_OVTool):
         try:
             client = await self._client()
             session_id = self._session_key_fn() if self._session_key_fn else "default"
-            await client.commit(session_id, messages, sender_id=sender_id)
-            return f"Successfully committed {len(messages)} messages to memory."
+            commit_coro = self._commit_in_background(
+                client=client,
+                session_id=session_id,
+                messages=messages,
+                sender_id=sender_id,
+            )
+            if self._background_task_scheduler is not None:
+                self._background_task_scheduler(commit_coro)
+            else:
+                task = asyncio.create_task(commit_coro)
+                self._pending_tasks.add(task)
+                task.add_done_callback(self._pending_tasks.discard)
+            return (
+                f"Queued background memory commit for {len(messages)} messages "
+                f"(session={session_id})."
+            )
         except Exception as e:
             logger.exception("Error committing to memory")
             return f"Error committing to memory: {e}"
+
+    @staticmethod
+    async def _commit_in_background(
+        *,
+        client: VikingClient,
+        session_id: str,
+        messages: list[dict[str, Any]],
+        sender_id: str,
+    ) -> None:
+        try:
+            result = await client.commit(session_id, messages, sender_id=sender_id)
+            if not result.get("success"):
+                logger.warning(
+                    "OpenViking background commit reported failure for session {}: {}",
+                    session_id,
+                    result,
+                )
+        except Exception:
+            logger.exception(
+                "OpenViking background commit failed for session {}", session_id
+            )
 
 
 class OVAddResourceTool(_OVTool):
