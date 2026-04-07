@@ -110,7 +110,6 @@ def create_app(
     # Standalone fallback: create an isolated AgentLoop when no bus provided
     if bus is None:
         from nanobot.agent.loop import AgentLoop
-        from nanobot.providers.litellm_provider import LiteLLMProvider
 
         bus = MessageBus()
         provider = _make_provider(config)
@@ -159,28 +158,10 @@ def create_app(
 
 
 def _make_provider(config: Config):
-    """Create LLM provider from config."""
-    from nanobot.providers.litellm_provider import LiteLLMProvider
+    """Create the provider using the same logic as gateway/CLI."""
+    from nanobot.nanobot import _make_provider as make_gateway_provider
 
-    model = config.agents.defaults.model
-
-    if config.is_proxy_mode:
-        return LiteLLMProvider(
-            default_model=model,
-            proxy_url=config.proxy.url,
-            proxy_token=config.proxy.token,
-        )
-
-    p = config.get_provider()
-    if not (p and p.api_key) and not model.startswith("bedrock/"):
-        raise RuntimeError("No API key configured. Set one in ~/.hiperone/config.json")
-    return LiteLLMProvider(
-        api_key=p.api_key if p else None,
-        api_base=config.get_api_base(),
-        default_model=model,
-        extra_headers=p.extra_headers if p else None,
-        provider_name=config.get_provider_name(),
-    )
+    return make_gateway_provider(config)
 
 
 # ============================================================================
