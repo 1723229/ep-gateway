@@ -1285,7 +1285,7 @@ When a channel `send()` raises, nanobot retries at the channel-manager layer. By
 
 nanobot supports multiple web search providers. Configure in `~/.hiperone/config.json` under `tools.web.search`.
 
-By default, web tools are enabled and web search uses `duckduckgo`, so search works out of the box without an API key.
+By default, web tools are enabled and web search uses `brave`. If no Brave API key is configured, nanobot falls back to `duckduckgo`, so search still works out of the box.
 
 If you want to disable all built-in web tools entirely, set `tools.web.enable` to `false`. This removes both `web_search` and `web_fetch` from the tool list sent to the LLM.
 
@@ -1305,7 +1305,8 @@ If you need to allow trusted private ranges such as Tailscale / CGNAT addresses,
 | `tavily` | `apiKey` | `TAVILY_API_KEY` | No |
 | `jina` | `apiKey` | `JINA_API_KEY` | Free tier (10M tokens) |
 | `searxng` | `baseUrl` | `SEARXNG_BASE_URL` | Yes (self-hosted) |
-| `duckduckgo` (default) | — | — | Yes |
+| `brave` (default) | `apiKey` | `BRAVE_API_KEY` | No |
+| `duckduckgo` | — | — | Yes |
 
 **Disable all built-in web tools:**
 ```json
@@ -1396,7 +1397,7 @@ If you need to allow trusted private ranges such as Tailscale / CGNAT addresses,
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `provider` | string | `"duckduckgo"` | Search backend: `brave`, `tavily`, `jina`, `searxng`, `duckduckgo` |
+| `provider` | string | `"brave"` | Search backend: `brave`, `tavily`, `jina`, `searxng`, `duckduckgo` |
 | `apiKey` | string | `""` | API key for Brave or Tavily |
 | `baseUrl` | string | `""` | Base URL for SearXNG |
 | `maxResults` | integer | `5` | Results per search (1–10) |

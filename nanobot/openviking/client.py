@@ -405,6 +405,8 @@ class VikingClient:
         except FileNotFoundError:
             return ""
         except Exception as e:
+            if self._is_missing_resource_error(e):
+                return ""
             logger.warning("Failed to read content from {} (resolved={}): {}", uri, read_uri, e)
             return ""
 
@@ -583,6 +585,17 @@ class VikingClient:
             "Development mode does not support account or user management",
             "Requires role:",
             "Permission denied",
+        )
+        return any(marker in message for marker in markers)
+
+    @staticmethod
+    def _is_missing_resource_error(exc: Exception) -> bool:
+        message = str(exc)
+        markers = (
+            "File not found",
+            "No such file",
+            "No such resource",
+            "404 Not Found",
         )
         return any(marker in message for marker in markers)
 
