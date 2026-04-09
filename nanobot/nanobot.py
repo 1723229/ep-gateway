@@ -82,6 +82,7 @@ class Nanobot:
             mcp_servers=config.tools.mcp_servers,
             openviking_config=config.openviking,
             timezone=defaults.timezone,
+            unified_session=defaults.unified_session,
         )
         return cls(loop)
 
