@@ -54,6 +54,7 @@ dependencies = [
     "fastapi>=0.115.0,<1.0.0",
     "uvicorn[standard]>=0.34.0,<1.0.0",
     "openviking>=0.3.3",
+    "filelock>=3.25.2",
 ]
 
 [project.optional-dependencies]
