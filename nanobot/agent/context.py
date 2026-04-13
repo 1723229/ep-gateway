@@ -33,7 +33,13 @@ class ContextBuilder:
     _PROFILE_CACHE_TTL = 300.0  # seconds to reuse a cached user profile
     _RUNTIME_CONTEXT_END = "[/Runtime Context]"
 
-    def __init__(self, workspace: Path, timezone: str | None = None, disabled_skills: list[str] | None = None, viking_client: VikingClient | None = None)):
+    def __init__(
+        self,
+        workspace: Path,
+        timezone: str | None = None,
+        disabled_skills: list[str] | None = None,
+        viking_client: VikingClient | None = None,
+    ):
         self.workspace = workspace
         self.timezone = timezone
         self.memory = MemoryStore(workspace)
@@ -176,7 +182,14 @@ class ContextBuilder:
         session_summary: str | None = None,
     ) -> list[dict[str, Any]]:
         """Build the complete message list for an LLM call."""
-        runtime_ctx = self._build_runtime_context(channel, chat_id, self.timezone, session_summary=session_summary, sender_id, sender_name)
+        runtime_ctx = self._build_runtime_context(
+            channel,
+            chat_id,
+            self.timezone,
+            session_summary=session_summary,
+            sender_id=sender_id,
+            sender_name=sender_name,
+        )
         user_content = self._build_user_content(current_message, media)
 
         if isinstance(user_content, str):
