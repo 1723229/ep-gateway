@@ -521,12 +521,6 @@ class VikingClient:
                         tool_input = {"raw_args": tool_info.get("args", "")}
 
                     result_str = str(tool_info.get("result", ""))
-                    skill_uri = ""
-                    if tool_name == "read_file" and result_str:
-                        match = re.search(r"^---\s*\nname:\s*(.+?)\s*\n", result_str, re.MULTILINE)
-                        if match:
-                            skill_uri = f"viking://agent/skills/{match.group(1).strip()}"
-
                     execute_success = tool_info.get("execute_success", True)
                     parts.append(
                         ToolPart(
@@ -536,7 +530,10 @@ class VikingClient:
                             tool_input=tool_input,
                             tool_output=result_str[:2000],
                             tool_status="completed" if execute_success else "error",
-                            skill_uri=skill_uri,
+                            # Avoid binding old skill context into semantic memory.
+                            # Channel-specific skill routing should come from the
+                            # current prompt, not recalled skill associations.
+                            skill_uri="",
                             duration_ms=float(tool_info.get("duration", 0.0)),
                             prompt_tokens=tool_info.get("input_token"),
                             completion_tokens=tool_info.get("output_token"),
