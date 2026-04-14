@@ -1,4 +1,4 @@
-"""Read lark-cli profile state and export runtime env values."""
+"""Read channel CLI state and export runtime env values."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ import json
 import os
 import re
 import shlex
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -50,6 +52,13 @@ def storage_dir() -> Path:
     return data_dir() / SERVICE_NAME
 
 
+def dingtalk_config_dir() -> Path:
+    raw = os.environ.get("DWS_CONFIG_DIR")
+    if raw:
+        return Path(raw).expanduser()
+    return Path.home() / ".dws"
+
+
 def load_multi_config() -> dict[str, Any]:
     path = config_dir() / "config.json"
     if not path.exists():
@@ -58,6 +67,16 @@ def load_multi_config() -> dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def load_json_file(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def current_or_named_profile(config: dict[str, Any], profile_name: str | None) -> dict[str, Any] | None:
@@ -190,7 +209,7 @@ def resolve_authorized_user(app_id: str, users: list[Any]) -> tuple[str, str, di
     return fallback_user_open_id, fallback_user_name, fallback_token
 
 
-def build_status(provider: str, profile_name: str | None) -> dict[str, Any]:
+def build_feishu_status(provider: str, profile_name: str | None) -> dict[str, Any]:
     state = {
         "provider": provider,
         "profile": profile_name or "",
@@ -243,7 +262,97 @@ def build_status(provider: str, profile_name: str | None) -> dict[str, Any]:
     return state
 
 
+def parse_json_output(raw_output: str) -> dict[str, Any]:
+    text = (raw_output or "").strip()
+    if not text:
+        return {}
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+    if isinstance(data, dict):
+        return data
+    for line in reversed([item.strip() for item in text.splitlines() if item.strip()]):
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
+def build_dingtalk_status(provider: str) -> dict[str, Any]:
+    app_config = load_json_file(dingtalk_config_dir() / "app.json")
+    app_id = str(app_config.get("clientId") or "").strip()
+    state = {
+        "provider": provider,
+        "profile": "",
+        "app_id": app_id,
+        "configured": bool(app_id),
+        "authenticated": False,
+        "authorized": False,
+        "corp_id": "",
+        "corp_name": "",
+        "user_id": "",
+        "user_name": "",
+        "message": "未登录",
+        "error": "",
+    }
+
+    if not shutil.which("dws"):
+        state["error"] = "dws_not_installed"
+        state["message"] = "dws 不存在"
+        return state
+
+    env = dict(os.environ)
+    env["DWS_CONFIG_DIR"] = str(dingtalk_config_dir())
+    try:
+        result = subprocess.run(
+            ["dws", "auth", "status", "-f", "json"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            env=env,
+            check=False,
+        )
+    except Exception as exc:
+        state["error"] = f"status_command_failed:{exc}"
+        state["message"] = str(exc)
+        return state
+
+    payload = parse_json_output(result.stdout)
+    if not payload:
+        state["error"] = "status_parse_failed"
+        state["message"] = (result.stderr or result.stdout or "读取 dws 状态失败").strip()
+        return state
+
+    authenticated = bool(payload.get("authenticated"))
+    state.update(
+        {
+            "authenticated": authenticated,
+            "authorized": authenticated,
+            "corp_id": str(payload.get("corp_id") or ""),
+            "corp_name": str(payload.get("corp_name") or ""),
+            "user_id": str(payload.get("user_id") or ""),
+            "user_name": str(payload.get("user_name") or ""),
+            "message": str(payload.get("message") or ("已登录" if authenticated else "未登录")),
+            "error": "",
+        }
+    )
+    return state
+
+
+def build_status(provider: str, profile_name: str | None) -> dict[str, Any]:
+    normalized = str(provider or "feishu").strip().lower()
+    if normalized == "dingtalk":
+        return build_dingtalk_status(normalized)
+    return build_feishu_status(normalized, profile_name)
+
+
 def print_env_exports(provider: str, profile_name: str | None) -> int:
+    if str(provider or "").strip().lower() == "dingtalk":
+        return 0
     state = build_status(provider, profile_name)
     secret = ""
     if state["env_ready"]:

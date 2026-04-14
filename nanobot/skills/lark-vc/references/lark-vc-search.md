@@ -79,7 +79,7 @@ lark-cli vc +search --query "周会" --format json
 
 ### 3. 仅支持 user 身份
 
-该接口仅支持 `user` 身份，使用前需完成 `lark-cli auth login` 并具备 `vc:meeting.search:read` 权限。
+该接口仅支持 `user` 身份。如当前用户授权缺失、过期或缺少 `vc:meeting.search:read`，由 agent 在后台发起 `lark-cli auth login --no-wait`，并把授权链接发给用户点击；不要让最终用户执行命令。
 
 ### 4. 支持分页
 
@@ -130,7 +130,7 @@ lark-cli vc +notes --meeting-ids <MEETING_ID>
 | 命令直接报错，要求提供过滤条件 | 没有传入 `--query`、时间范围或任何过滤 ID | 至少补充一个过滤条件后重试 |
 | 时间参数校验失败 | `--start` 或 `--end` 格式不合法 | 改用 ISO 8601 或 `YYYY-MM-DD` |
 | 搜不到未来会议 | `vc +search` 只查历史会议 | 改用 [lark-calendar](../../lark-calendar/SKILL.md) 查询未来日程 |
-| 权限不足 | 未授权 `vc:meeting.search:read` | 使用 `auth login` 完成授权 |
+| 权限不足 | 未授权 `vc:meeting.search:read` | 由 agent 发起用户授权并返回授权链接 |
 
 ## 提示
 - 必须使用 `--format json` 输出，你更佳擅长解析 JSON 数据。

@@ -47,13 +47,15 @@ class SkillsLoader:
             return {"feishu", "lark"}
         if normalized == "wecom":
             return {"wecom"}
+        if normalized == "weixin":
+            return {"weixin", "wechat"}
         if normalized == "dingtalk":
             return {"dingtalk"}
         return set()
 
     @staticmethod
     def _known_channel_skill_prefixes() -> set[str]:
-        return {"feishu", "lark", "wecom", "dingtalk"}
+        return {"feishu", "lark", "wecom", "weixin", "wechat", "dingtalk"}
 
     @classmethod
     def _is_channel_skill(cls, name: str) -> bool:

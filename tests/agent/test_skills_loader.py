@@ -375,6 +375,27 @@ def test_channel_filter_keeps_only_wecom_channel_skills_for_wecom(tmp_path: Path
     assert [entry["name"] for entry in entries] == ["pdf", "wecomcli-msg"]
 
 
+def test_channel_filter_keeps_only_weixin_channel_skills_for_weixin(tmp_path: Path) -> None:
+    workspace = tmp_path / "ws"
+    ws_skills = workspace / "skills"
+    ws_skills.mkdir(parents=True)
+    _write_skill(ws_skills, "wechat-pay", body="# WeChat")
+    _write_skill(ws_skills, "weixin-doc", body="# Weixin")
+    _write_skill(ws_skills, "lark-doc", body="# Lark")
+    _write_skill(ws_skills, "wecomcli-msg", body="# WeCom")
+    _write_skill(ws_skills, "weather", body="# Weather")
+    builtin = tmp_path / "builtin"
+    builtin.mkdir()
+
+    loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
+    entries = sorted(
+        loader.list_skills(filter_unavailable=False, channel="weixin"),
+        key=lambda item: item["name"],
+    )
+
+    assert [entry["name"] for entry in entries] == ["weather", "wechat-pay", "weixin-doc"]
+
+
 def test_channel_filter_is_disabled_for_unknown_channel(tmp_path: Path) -> None:
     workspace = tmp_path / "ws"
     ws_skills = workspace / "skills"
