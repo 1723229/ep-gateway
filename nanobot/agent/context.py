@@ -178,7 +178,7 @@ class ContextBuilder:
             pass
         return False
 
-    def build_messages(
+    async def build_messages(
         self,
         history: list[dict[str, Any]],
         current_message: str,
