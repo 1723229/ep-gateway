@@ -98,7 +98,10 @@ class SkillReviewService:
                     ev.get("name"), ev.get("status"), ev.get("detail", "")[:200],
                 )
         else:
-            logger.debug("Skill review: no actions taken (stop_reason={})", result.stop_reason)
+            logger.debug(
+                "Skill review: no actions taken (stop_reason={}, response={})",
+                result.stop_reason, (result.final_content or "")[:300],
+            )
 
     @staticmethod
     def _summarize_conversation(messages: list[dict[str, Any]]) -> str:
