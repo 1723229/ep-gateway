@@ -4,7 +4,12 @@
 
 - 本文中的 `dws` 命令示例仅供 agent 在后台执行参考，不要原样发给用户。
 - 需要用户打开授权页面或其他入口时，只返回链接、页面入口或简短说明。
-- 如果处理考勤请求时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台发起 `dws auth login --device` 获取授权链接；用户可见回复只返回授权链接和“完成授权后我继续查询考勤”的提示，不要让用户执行命令。
+- 如果处理考勤请求时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台通过 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"` 统一处理认证；如果返回授权链接，用户可见回复只返回授权链接和“完成授权后我继续查询考勤”的提示，不要让用户执行命令。
+
+## 当前用户考勤的强制规则
+
+- 用户说“查看考勤 / 我的考勤 / 今天考勤 / 本周考勤”这类当前用户查询时，优先使用 [attendance_my_record.py](../../scripts/attendance_my_record.py)。
+- 不要把 Runtime Context 里的 `Sender ID`、`Chat ID` 直接当成 `attendance record get --user` 的 `userId`；钉钉业务 `userId` 必须通过 `contact user get-self` 或脚本内部查询得到。
 
 ## 命令总览
 
@@ -90,7 +95,7 @@ dws attendance rules --date 2026-03-14 --format json
 - `summary` 的 `--date` 格式: yyyy-MM-dd HH:mm:ss（如 `2026-03-12 15:00:00`）
 - `rules` 的 `--date` 支持 YYYY-MM-DD 或 yyyy-MM-dd HH:mm:ss 两种格式
 - 用户 ID 需从 `contact user get-self` 或 `contact user search` 获取
-- 如果查询考勤时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台发起 `dws auth login --device` 获取授权链接；用户可见回复只返回授权链接和“完成授权后继续查询考勤”的提示，不要让用户执行命令
+- 如果查询考勤时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台通过 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"` 统一处理认证；如果返回授权链接，用户可见回复只返回授权链接和“完成授权后继续查询考勤”的提示，不要让用户执行命令
 
 ## 自动化脚本
 
@@ -98,3 +103,4 @@ dws attendance rules --date 2026-03-14 --format json
 |------|------|------|
 | [attendance_my_record.py](../../scripts/attendance_my_record.py) | 查看我今天/指定日期的考勤记录 | `python attendance_my_record.py today` |
 | [attendance_team_shift.py](../../scripts/attendance_team_shift.py) | 查询团队成员本周排班 | `python attendance_team_shift.py --users userId1,userId2` |
+| [auth_device_session.py](../../scripts/auth_device_session.py) | 统一处理钉钉认证：已授权直接返回状态，未授权则自动返回授权链接 | `python <skill_dir>/scripts/auth_device_session.py status --session "4324482053855089011"` |

@@ -51,7 +51,7 @@ lark-cli vc +notes --meeting-ids 69xxxxxxxxxxxxx28 --dry-run
 
 ### 2. 仅支持 user 身份
 
-该命令仅支持 `user` 身份。如当前用户授权缺失或过期，由 agent 在后台发起 `lark-cli auth login --no-wait`，并把授权链接发给用户点击。
+该命令仅支持 `user` 身份。如当前用户授权缺失或过期，按 [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md) 的非阻塞认证规则在后台发起增量授权，并把授权链接发给用户点击。
 
 ### 3. 批量上限
 

@@ -15,16 +15,35 @@ cli_version: ">=1.0.6"
 - 如果流程里需要用户参与登录、授权、确认或打开页面，只返回可点击的链接、页面入口或简短说明。
 - 开放平台文档、Webhook 配置、机器人授权、登录失效等场景，优先给用户链接和下一步说明，不要直接给命令。
 - 遇到登录失效、Token 过期、考勤/日历/通讯录等读取失败需要重新授权时，用户可见回复里只允许出现：简短原因说明 + 授权链接 + 授权完成后的下一步；禁止出现“请执行命令”“打开终端运行”“复制下面命令”等字样。
+- Runtime Context 里已经提供 `Chat ID`、`Sender ID`。钉钉场景下做授权会话隔离时，直接使用 `Sender ID` 作为 session 标识，避免不同用户共用同一个授权进程。
+- `skill_view("dingtalk-skills")` 返回结果里会包含 `skill_dir`。需要执行脚本时，优先使用这个绝对目录拼出脚本路径，不要假设当前工作目录就在 skill 目录内。
 
 ## 钉钉登录失效处理
 
-当钉钉登录失效，需要重新登录时，由 agent 在内部发起设备流授权：
+当钉钉登录失效，需要重新登录时，不要直接在 `exec` 里运行裸命令 `dws auth login --device`，也不要加 `--format json`，更不要用 shell `timeout` 包住它；那样要么拿不到授权链接，要么会把登录轮询进程提前杀掉，导致用户虽然点了授权，但本地 token 文件不会更新。
+
+必须使用辅助脚本作为统一认证入口：
 
 ```bash
-dws auth login --device
+python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"
 ```
 
-代理内部执行后会返回一个授权链接。把这个链接直接发给用户，提醒用户完成授权即可；不要把 `dws auth login --device` 这条命令原样发给用户。
+脚本会自动处理两种情况：
+1. 如果当前已授权，直接返回 `authenticated=true`，不返回链接
+2. 如果当前未授权，自动复用或启动后台 `dws auth login --device` 进程，并返回授权链接
+
+建议主流程：
+1. 直接执行 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"`
+2. 如果结果里 `authenticated=true`，直接继续原始业务命令
+3. 如果结果里 `authenticated=false` 且带有授权链接，就把该链接发给用户
+
+不要在钉钉认证流程里单独执行 `dws auth status`。登录态判断已经内置在 `auth_device_session.py status` 里。
+
+如果你明确需要只观察后台授权会话、不触发自动拉起，使用：
+
+```bash
+python <skill_dir>/scripts/auth_device_session.py probe --session "<SENDER_ID>"
+```
 
 用户可见回复模板：
 
@@ -43,7 +62,7 @@ dws auth login --device
 - 不要猜测字段名/参数值，操作前必须先查询确认
 
 ## 严格要求 (MUST DO)
-- 所有命令必须加 `--format json` 以获取可解析输出
+- 所有 `dws` 业务命令必须加 `--format json` 以获取可解析输出；`auth login --device` 是例外，必须通过 `<skill_dir>/scripts/auth_device_session.py` 调用，不要手写 `dws auth login --device --format json`
 - 危险操作必须先向用户确认，用户同意后才加 `--yes` 执行
 - 单次批量操作不超过 30 条记录
 - 所有命令必须**严格遵循**对应产品参考文档里面规定的参数格式（如：如果有参数值，则参数和参数值之间至少用一个空格隔开）

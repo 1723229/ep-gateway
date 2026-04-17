@@ -22,7 +22,7 @@
 
 ### 需用户介入
 - 权限不足 / 资源不存在 / 配额超限 → 报告完整错误信息给用户，不要自行尝试替代方案
-- `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败" → 由 agent 在后台发起 `dws auth login --device`，向用户只返回授权链接和一句简短说明，不要让用户执行命令
+- `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败" → 由 agent 在后台发起 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"`，向用户只返回授权链接和一句简短说明，不要让用户执行命令
 
 ## 通用错误
 - 请求超时 — 网络慢或服务端响应慢 → `--timeout 60` 重试

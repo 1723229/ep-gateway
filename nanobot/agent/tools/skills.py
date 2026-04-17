@@ -155,7 +155,10 @@ class SkillViewTool(Tool):
             return json.dumps({
                 "success": True,
                 "name": skill_name,
+                "skill_dir": str(skill_dir),
+                "skill_file": str(skill_dir / "SKILL.md"),
                 "file": file_path,
+                "file_path": str(skill_dir / file_path),
                 "content": content,
             }, ensure_ascii=False)
 
@@ -179,6 +182,8 @@ class SkillViewTool(Tool):
             "description": metadata.get("description", ""),
             "source": source,
             "mutable": source == "workspace",
+            "skill_dir": str(skill_dir),
+            "skill_file": str(skill_dir / "SKILL.md"),
             "content": content,
             "linked_files": supporting or None,
             "usage_hint": (

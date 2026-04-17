@@ -45,7 +45,7 @@ lark-cli docs +create --title "学习笔记" --wiki-space my_library --markdown 
 >
 > 以应用身份创建时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
 > - `status = granted`：当前 CLI 用户已获得该文档的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；应由 agent 在后台发起用户授权并把授权链接发给用户，授权完成后再继续使用应用身份（bot）授予当前用户权限
+> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；应按 [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md) 的非阻塞认证规则在后台发起用户授权并把授权链接发给用户，授权完成后再继续使用应用身份（bot）授予当前用户权限
 > - `status = failed`：文档已创建成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文档
 >
 > `permission_grant.perm = full_access` 表示该资源已授予“可管理权限”。

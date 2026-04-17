@@ -79,7 +79,7 @@ lark-cli vc +search --query "周会" --format json
 
 ### 3. 仅支持 user 身份
 
-该接口仅支持 `user` 身份。如当前用户授权缺失、过期或缺少 `vc:meeting.search:read`，由 agent 在后台发起 `lark-cli auth login --no-wait`，并把授权链接发给用户点击；不要让最终用户执行命令。
+该接口仅支持 `user` 身份。如当前用户授权缺失、过期或缺少 `vc:meeting.search:read`，按 [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md) 的非阻塞认证规则在后台发起 `lark-cli auth login --no-wait --scope "vc:meeting.search:read"`，并把授权链接发给用户点击；不要让最终用户执行命令。
 
 ### 4. 支持分页
 

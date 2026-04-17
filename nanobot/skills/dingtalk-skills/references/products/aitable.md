@@ -4,7 +4,7 @@
 
 - 本文中的 `dws` 命令和脚本示例仅供 agent 在后台执行参考，不要原样发给用户。
 - 需要用户打开文档、模板或页面时，只返回链接、页面入口或简短说明。
-- 如果操作 AI 表格时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台发起 `dws auth login --device` 获取授权链接；用户可见回复只返回授权链接和“完成授权后我继续处理 AI 表格”的提示，不要让用户执行命令。
+- 如果操作 AI 表格时遇到 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败"，先由 agent 在后台通过 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"` 统一处理认证；如果返回授权链接，用户可见回复只返回授权链接和“完成授权后我继续处理 AI 表格”的提示，不要让用户执行命令。
 
 ## 文档地址 (URI)
 

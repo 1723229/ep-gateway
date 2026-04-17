@@ -8,11 +8,14 @@
 ## 认证
 
 ```bash
-# 首次: OAuth 设备流登录 (钉钉扫码授权)
-dws auth login --device
+# 推荐: 统一认证入口。已授权则直接返回状态，未授权则自动返回授权链接
+python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"
 
-# 查看状态
-dws auth status
+# 仅排查时使用: 只观察当前后台授权会话，不自动拉起新流程
+python <skill_dir>/scripts/auth_device_session.py probe --session "<SENDER_ID>"
+
+# 清理失效或残留的授权会话
+python <skill_dir>/scripts/auth_device_session.py cleanup --session "<SENDER_ID>"
 
 # 退出
 dws auth logout
@@ -22,6 +25,18 @@ dws auth reset
 ```
 
 以上认证命令供 agent 内部执行参考；如果需要用户参与扫码或授权，只把返回的授权链接发给用户，不要让最终用户自己执行这些命令。
+
+### Device Flow 强制规则
+
+- 不要直接在 `exec` 里运行裸命令 `dws auth login --device`
+- 不要给 `dws auth login --device` 添加 `--format json`
+- 不要用 shell `timeout`、`2>&1` 拼接、前台阻塞重试等方式去“试探”授权链接
+- 必须通过 [scripts/auth_device_session.py](../scripts/auth_device_session.py) 处理认证；只有这样用户授权完成后，本地 token 文件才会被真正写回
+- `skill_view("dingtalk-skills")` 返回值里包含 `skill_dir`；执行脚本时优先使用这个绝对路径
+- 辅助脚本里的 `--session` 应直接使用 Runtime Context 中的 `Sender ID`
+- 不要单独执行 `dws auth status`；钉钉认证判断必须走 `auth_device_session.py status`
+- 主流程直接调用 `auth_device_session.py status`；已登录时它返回 `authenticated=true`，未登录时它会自动复用或拉起设备流并返回授权链接
+- `probe` 只用于排查后台授权会话，不作为主流程要求
 
 用户可见回复必须只包含：
 - 简短说明（如“登录已失效，需要重新授权”）
@@ -44,7 +59,7 @@ dws auth reset
 30 天内使用一次即自动续期。
 
 ### 认证失败处理
-- 命令返回 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败" → 由 agent 在后台执行 `dws auth login --device` 重新登录，并把返回的授权链接发给用户；不要让最终用户执行该命令
+- 命令返回 `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` / "Token验证失败" → 由 agent 在后台执行 `python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"` 统一处理认证；如果返回授权链接，再把该链接发给用户；不要让最终用户执行该命令
 
 推荐用户可见回复：
 
@@ -61,13 +76,13 @@ dws auth reset
 # 通过环境变量配置认证（无需交互式登录）
 export DWS_CLIENT_ID=<your-app-key>
 export DWS_CLIENT_SECRET=<your-app-secret>
-dws auth login --device
+python <skill_dir>/scripts/auth_device_session.py status --session "<SENDER_ID>"
 
-# 或使用 --device 设备流登录（远程服务器/Docker）
+# 或仅在人工调试时使用原始设备流命令
 dws auth login --device
 ```
 
-以上命令仍然是 agent 内部执行的参考形式；如果触发设备流登录，只把授权链接返回给用户，不要把命令原样发给用户。
+以上命令仍然是 agent 内部执行的参考形式；如果触发设备流登录，只把授权链接返回给用户，不要把命令原样发给用户。对 agent 来说，优先使用 `status` 这个统一入口而不是原始命令。
 refresh_token 单设备独占，远程刷新后源设备凭证失效。
 
 ## Recovery
