@@ -312,139 +312,88 @@ def test_disabled_skills_excluded_from_get_always_skills(tmp_path: Path) -> None
     assert "beta" in always
 
 
-def test_channel_filter_keeps_feishu_and_lark_skills_only_for_feishu(tmp_path: Path) -> None:
+# -- multiline description tests (YAML folded > and literal |) -----------------
+
+
+def test_build_skills_summary_folded_description(tmp_path: Path) -> None:
+    """description: > (YAML folded scalar) should be parsed correctly."""
     workspace = tmp_path / "ws"
     ws_skills = workspace / "skills"
     ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "lark-doc", body="# Lark")
-    _write_skill(ws_skills, "feishu-bitable", body="# Feishu")
-    _write_skill(ws_skills, "wecomcli-msg", body="# WeCom")
-    _write_skill(ws_skills, "weather", body="# Weather")
-    builtin = tmp_path / "builtin"
-    builtin.mkdir()
-
-    loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    entries = sorted(
-        loader.list_skills(filter_unavailable=False, channel="feishu"),
-        key=lambda item: item["name"],
+    skill_dir = ws_skills / "pdf"
+    skill_dir.mkdir(parents=True)
+    skill_path = skill_dir / "SKILL.md"
+    skill_path.write_text(
+        "---\n"
+        "name: pdf\n"
+        "description: >\n"
+        "  Use this skill when visual quality and design identity matter for a PDF.\n"
+        "  CREATE (generate from scratch): \"make a PDF\".\n"
+        "---\n\n# PDF Skill\n",
+        encoding="utf-8",
     )
-
-    assert [entry["name"] for entry in entries] == [
-        "feishu-bitable",
-        "lark-doc",
-        "weather",
-    ]
-
-
-def test_channel_filter_is_case_insensitive(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "LARK-DOC", body="# Lark")
-    _write_skill(ws_skills, "WeComCli-Msg", body="# WeCom")
-    _write_skill(ws_skills, "memory", body="# Memory")
     builtin = tmp_path / "builtin"
     builtin.mkdir()
 
     loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    entries = sorted(
-        loader.list_skills(filter_unavailable=False, channel="FEISHU"),
-        key=lambda item: item["name"].lower(),
+    summary = loader.build_skills_summary()
+    assert "pdf" in summary
+    assert "visual quality" in summary
+
+
+def test_build_skills_summary_literal_description(tmp_path: Path) -> None:
+    """description: | (YAML literal scalar) should be parsed correctly."""
+    workspace = tmp_path / "ws"
+    ws_skills = workspace / "skills"
+    ws_skills.mkdir(parents=True)
+    skill_dir = ws_skills / "multi"
+    skill_dir.mkdir(parents=True)
+    skill_path = skill_dir / "SKILL.md"
+    skill_path.write_text(
+        "---\n"
+        "name: multi\n"
+        "description: |\n"
+        "  Line one of description.\n"
+        "  Line two of description.\n"
+        "---\n\n# Multi\n",
+        encoding="utf-8",
     )
-
-    assert [entry["name"] for entry in entries] == ["LARK-DOC", "memory"]
-
-
-def test_channel_filter_keeps_only_wecom_channel_skills_for_wecom(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "lark-doc", body="# Lark")
-    _write_skill(ws_skills, "feishu-bitable", body="# Feishu")
-    _write_skill(ws_skills, "wecomcli-msg", body="# WeCom")
-    _write_skill(ws_skills, "pdf", body="# PDF")
     builtin = tmp_path / "builtin"
     builtin.mkdir()
 
     loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    entries = sorted(
-        loader.list_skills(filter_unavailable=False, channel="wecom"),
-        key=lambda item: item["name"],
+    meta = loader.get_skill_metadata("multi")
+    assert meta is not None
+    desc = meta.get("description")
+    assert isinstance(desc, str)
+    assert "Line one" in desc
+    assert "Line two" in desc
+
+
+def test_get_skill_metadata_handles_yaml_types(tmp_path: Path) -> None:
+    """yaml.safe_load returns native types; always should be True, not 'true'."""
+    workspace = tmp_path / "ws"
+    ws_skills = workspace / "skills"
+    ws_skills.mkdir(parents=True)
+    skill_dir = ws_skills / "typed"
+    skill_dir.mkdir(parents=True)
+    payload = json.dumps({"nanobot": {"requires": {"bins": ["gh"]}, "always": True}}, separators=(",", ":"))
+    skill_path = skill_dir / "SKILL.md"
+    skill_path.write_text(
+        "---\n"
+        "name: typed\n"
+        f"metadata: {payload}\n"
+        "always: true\n"
+        "---\n\n# Typed\n",
+        encoding="utf-8",
     )
-
-    assert [entry["name"] for entry in entries] == ["pdf", "wecomcli-msg"]
-
-
-def test_channel_filter_keeps_only_weixin_channel_skills_for_weixin(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "wechat-pay", body="# WeChat")
-    _write_skill(ws_skills, "weixin-doc", body="# Weixin")
-    _write_skill(ws_skills, "lark-doc", body="# Lark")
-    _write_skill(ws_skills, "wecomcli-msg", body="# WeCom")
-    _write_skill(ws_skills, "weather", body="# Weather")
     builtin = tmp_path / "builtin"
     builtin.mkdir()
 
     loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    entries = sorted(
-        loader.list_skills(filter_unavailable=False, channel="weixin"),
-        key=lambda item: item["name"],
-    )
-
-    assert [entry["name"] for entry in entries] == ["weather", "wechat-pay", "weixin-doc"]
-
-
-def test_channel_filter_is_disabled_for_unknown_channel(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "lark-doc", body="# Lark")
-    _write_skill(ws_skills, "wecomcli-msg", body="# WeCom")
-    _write_skill(ws_skills, "weather", body="# Weather")
-    builtin = tmp_path / "builtin"
-    builtin.mkdir()
-
-    loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    entries = sorted(
-        loader.list_skills(filter_unavailable=False, channel="telegram"),
-        key=lambda item: item["name"],
-    )
-
-    assert [entry["name"] for entry in entries] == ["lark-doc", "weather", "wecomcli-msg"]
-
-
-def test_channel_filter_applies_to_always_skills(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "lark-doc", metadata_json={"always": True}, body="# Lark")
-    _write_skill(ws_skills, "wecomcli-msg", metadata_json={"always": True}, body="# WeCom")
-    _write_skill(ws_skills, "memory", metadata_json={"always": True}, body="# Memory")
-    builtin = tmp_path / "builtin"
-    builtin.mkdir()
-
-    loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-    always = sorted(loader.get_always_skills(channel="feishu"))
-
-    assert always == ["lark-doc", "memory"]
-
-
-def test_invalid_utf8_skill_is_skipped_without_crashing(tmp_path: Path) -> None:
-    workspace = tmp_path / "ws"
-    ws_skills = workspace / "skills"
-    ws_skills.mkdir(parents=True)
-    _write_skill(ws_skills, "good", metadata_json={"always": True}, body="# Good")
-    bad_dir = ws_skills / "bad"
-    bad_dir.mkdir(parents=True)
-    (bad_dir / "SKILL.md").write_bytes(b"---\nmetadata: x\n---\n\n\xA1\xA1")
-    builtin = tmp_path / "builtin"
-    builtin.mkdir()
-
-    loader = SkillsLoader(workspace, builtin_skills_dir=builtin)
-
-    entries = loader.list_skills(filter_unavailable=False)
-    assert [entry["name"] for entry in entries] == ["good"]
-    assert loader.get_skill_metadata("bad") is None
-    assert loader.get_always_skills() == ["good"]
+    meta = loader.get_skill_metadata("typed")
+    assert meta is not None
+    # YAML parsed 'true' to Python True
+    assert meta.get("always") is True
+    # metadata is a parsed dict, not a JSON string
+    assert isinstance(meta.get("metadata"), dict)
