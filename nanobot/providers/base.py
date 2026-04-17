@@ -67,6 +67,14 @@ class LLMResponse:
         """Check if response contains tool calls."""
         return len(self.tool_calls) > 0
 
+    @property
+    def should_execute_tools(self) -> bool:
+        """Tools execute only when has_tool_calls AND finish_reason is ``tool_calls`` / ``stop``.
+        Blocks gateway-injected calls under ``refusal`` / ``content_filter`` / ``error`` (#3220)."""
+        if not self.has_tool_calls:
+            return False
+        return self.finish_reason in ("tool_calls", "stop")
+
 
 @dataclass(frozen=True)
 class GenerationSettings:
