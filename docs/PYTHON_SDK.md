@@ -1,39 +1,81 @@
 # Python SDK
 
-> **Note:** This interface is currently an experiment in the latest source code version and is planned to officially ship in `v0.1.5`.
-
-Use nanobot programmatically — load config, run the agent, get results.
+Use nanobot as a library — no CLI, no gateway, just Python.
 
 ## Quick Start
 
 ```python
 import asyncio
+
 from nanobot import Nanobot
 
-async def main():
+
+async def main() -> None:
     bot = Nanobot.from_config()
     result = await bot.run("What time is it in Tokyo?")
     print(result.content)
 
+
 asyncio.run(main())
 ```
 
-## API
+`Nanobot.from_config()` reuses your normal `~/.nanobot/config.json`, so the SDK follows the same provider, model, tools, and workspace defaults as the CLI unless you override them.
 
-### `Nanobot.from_config(config_path?, *, workspace?)`
+## Common Patterns
 
-Create a `Nanobot` from a config file.
+### Use a specific config or workspace
+
+```python
+from nanobot import Nanobot
+
+bot = Nanobot.from_config(
+    config_path="~/.nanobot/config.json",
+    workspace="/my/project",
+)
+```
+
+### Isolate conversations with `session_key`
+
+Different session keys keep independent conversation history:
+
+```python
+await bot.run("hi", session_key="user-alice")
+await bot.run("hi", session_key="task-42")
+```
+
+### Attach hooks for observability
+
+Hooks let you inspect tool calls, streaming, and iteration state without modifying nanobot internals:
+
+```python
+from nanobot.agent import AgentHook, AgentHookContext
+
+
+class AuditHook(AgentHook):
+    async def before_execute_tools(self, context: AgentHookContext) -> None:
+        for tc in context.tool_calls:
+            print(f"[tool] {tc.name}")
+
+
+result = await bot.run("Review this change", hooks=[AuditHook()])
+```
+
+## API Reference
+
+### `Nanobot.from_config(config_path=None, *, workspace=None)`
+
+Create a `Nanobot` instance from a config file.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `config_path` | `str \| Path \| None` | `None` | Path to `config.json`. Defaults to `~/.hiperone/config.json`. |
-| `workspace` | `str \| Path \| None` | `None` | Override workspace directory from config. |
+| `config_path` | `str \| Path \| None` | `None` | Path to `config.json`. Defaults to `~/.nanobot/config.json`. |
+| `workspace` | `str \| Path \| None` | `None` | Override the workspace directory from config. |
 
-Raises `FileNotFoundError` if an explicit path doesn't exist.
+Raises `FileNotFoundError` if an explicit config path does not exist.
 
-### `await bot.run(message, *, session_key?, hooks?)`
+### `await bot.run(message, *, session_key="sdk:default", hooks=None)`
 
-Run the agent once. Returns a `RunResult`.
+Run the agent once and return a `RunResult`.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -41,71 +83,102 @@ Run the agent once. Returns a `RunResult`.
 | `session_key` | `str` | `"sdk:default"` | Session identifier for conversation isolation. Different keys get independent history. |
 | `hooks` | `list[AgentHook] \| None` | `None` | Lifecycle hooks for this run only. |
 
-```python
-# Isolated sessions — each user gets independent conversation history
-await bot.run("hi", session_key="user-alice")
-await bot.run("hi", session_key="user-bob")
-```
-
 ### `RunResult`
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `content` | `str` | The agent's final text response. |
-| `tools_used` | `list[str]` | Tool names invoked during the run. |
-| `messages` | `list[dict]` | Raw message history (for debugging). |
+| `tools_used` | `list[str]` | Reserved for richer SDK introspection; may be empty in current versions. |
+| `messages` | `list[dict]` | Reserved for richer SDK introspection; may be empty in current versions. |
 
 ## Hooks
 
-Hooks let you observe or modify the agent loop without touching internals.
+Hooks let you observe or customize the agent loop. Subclass `AgentHook` and override the methods you need.
 
-Subclass `AgentHook` and override any method:
+### Hook lifecycle
 
 | Method | When |
 |--------|------|
-| `before_iteration(ctx)` | Before each LLM call |
-| `on_stream(ctx, delta)` | On each streamed token |
-| `on_stream_end(ctx)` | When streaming finishes |
-| `before_execute_tools(ctx)` | Before tool execution (inspect `ctx.tool_calls`) |
-| `after_iteration(ctx, response)` | After each LLM response |
-| `finalize_content(ctx, content)` | Transform final output text |
+| `wants_streaming()` | Return `True` if you want token-by-token `on_stream()` callbacks |
+| `before_iteration(context)` | Before each LLM call |
+| `on_stream(context, delta)` | On each streamed token when streaming is enabled |
+| `on_stream_end(context, *, resuming)` | When streaming finishes |
+| `before_execute_tools(context)` | Before tool execution |
+| `after_iteration(context)` | After each iteration |
+| `finalize_content(context, content)` | Transform final output text |
 
-### Example: Audit Hook
+Useful fields on `AgentHookContext` include:
+
+- `iteration`
+- `messages`
+- `response`
+- `usage`
+- `tool_calls`
+- `tool_results`
+- `tool_events`
+- `final_content`
+- `stop_reason`
+- `error`
+
+### Example: audit tool calls
 
 ```python
 from nanobot.agent import AgentHook, AgentHookContext
 
-class AuditHook(AgentHook):
-    def __init__(self):
-        self.calls = []
 
-    async def before_execute_tools(self, ctx: AgentHookContext) -> None:
-        for tc in ctx.tool_calls:
+class AuditHook(AgentHook):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[str] = []
+
+    async def before_execute_tools(self, context: AgentHookContext) -> None:
+        for tc in context.tool_calls:
             self.calls.append(tc.name)
             print(f"[audit] {tc.name}({tc.arguments})")
-
-hook = AuditHook()
-result = await bot.run("List files in /tmp", hooks=[hook])
-print(f"Tools used: {hook.calls}")
 ```
 
-### Composing Hooks
+```python
+hook = AuditHook()
+result = await bot.run("List files in /tmp", hooks=[hook])
+print(result.content)
+print(f"Tools observed: {hook.calls}")
+```
 
-Pass multiple hooks — they run in order, errors in one don't block others:
+### Example: receive streaming tokens
+
+```python
+from nanobot.agent import AgentHook, AgentHookContext
+
+
+class StreamingHook(AgentHook):
+    def wants_streaming(self) -> bool:
+        return True
+
+    async def on_stream(self, context: AgentHookContext, delta: str) -> None:
+        print(delta, end="", flush=True)
+
+    async def on_stream_end(self, context: AgentHookContext, *, resuming: bool) -> None:
+        print()
+```
+
+### Compose multiple hooks
+
+Pass multiple hooks when you want to combine behaviors:
 
 ```python
 result = await bot.run("hi", hooks=[AuditHook(), MetricsHook()])
 ```
 
-Under the hood this uses `CompositeHook` for fan-out with error isolation.
+Async hook methods are fan-out with error isolation. `finalize_content` is a pipeline: each hook receives the previous hook's output.
 
-### `finalize_content` Pipeline
-
-Unlike the async methods (fan-out), `finalize_content` is a pipeline — each hook's output feeds the next:
+### Example: post-process final content
 
 ```python
+from nanobot.agent import AgentHook
+
+
 class Censor(AgentHook):
-    def finalize_content(self, ctx, content):
+    def finalize_content(self, context, content):
         return content.replace("secret", "***") if content else content
 ```
 
@@ -113,26 +186,34 @@ class Censor(AgentHook):
 
 ```python
 import asyncio
+import time
+
 from nanobot import Nanobot
 from nanobot.agent import AgentHook, AgentHookContext
 
+
 class TimingHook(AgentHook):
-    async def before_iteration(self, ctx: AgentHookContext) -> None:
-        import time
-        ctx.metadata["_t0"] = time.time()
+    def __init__(self) -> None:
+        super().__init__()
+        self._started_at = 0.0
 
-    async def after_iteration(self, ctx, response) -> None:
-        import time
-        elapsed = time.time() - ctx.metadata.get("_t0", 0)
-        print(f"[timing] iteration took {elapsed:.2f}s")
+    async def before_iteration(self, context: AgentHookContext) -> None:
+        self._started_at = time.perf_counter()
 
-async def main():
+    async def after_iteration(self, context: AgentHookContext) -> None:
+        elapsed_ms = (time.perf_counter() - self._started_at) * 1000
+        print(f"[timing] iteration {context.iteration} took {elapsed_ms:.1f}ms")
+
+
+async def main() -> None:
     bot = Nanobot.from_config(workspace="/my/project")
     result = await bot.run(
         "Explain the main function",
+        session_key="sdk:demo",
         hooks=[TimingHook()],
     )
     print(result.content)
+
 
 asyncio.run(main())
 ```

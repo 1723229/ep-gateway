@@ -19,7 +19,7 @@ We'll build a minimal webhook channel that receives messages via HTTP POST and s
 
 ### Project Structure
 
-```
+```text
 nanobot-channel-webhook/
 ├── nanobot_channel_webhook/
 │   ├── __init__.py          # re-export WebhookChannel
@@ -158,7 +158,7 @@ nanobot plugins list      # verify "Webhook" shows as "plugin"
 nanobot onboard           # auto-adds default config for detected plugins
 ```
 
-Edit `~/.hiperone/config.json`:
+Edit `~/.nanobot/config.json`:
 
 ```json
 {
