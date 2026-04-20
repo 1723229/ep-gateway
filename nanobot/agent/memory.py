@@ -437,7 +437,12 @@ class Consolidator:
                 return idx
         return None
 
-    async def estimate_session_prompt_tokens(self, session: Session) -> tuple[int, str]:
+    async def estimate_session_prompt_tokens(
+        self,
+        session: Session,
+        *,
+        session_summary: str | None = None,
+    ) -> tuple[int, str]:
         """Estimate current prompt size for the normal session history view."""
         history = session.get_history(max_messages=0)
         channel, chat_id = (session.key.split(":", 1) if ":" in session.key else (None, None))
@@ -446,6 +451,7 @@ class Consolidator:
             current_message="[token-probe]",
             channel=channel,
             chat_id=chat_id,
+            session_summary=session_summary,
         )
         return estimate_prompt_tokens_chain(
             self.provider,
@@ -488,7 +494,12 @@ class Consolidator:
             self.store.raw_archive(messages)
             return None
 
-    async def maybe_consolidate_by_tokens(self, session: Session) -> None:
+    async def maybe_consolidate_by_tokens(
+        self,
+        session: Session,
+        *,
+        session_summary: str | None = None,
+    ) -> None:
         """Loop: archive old messages until prompt fits within safe budget.
 
         The budget reserves space for completion tokens and a safety buffer
@@ -502,7 +513,10 @@ class Consolidator:
             budget = self.context_window_tokens - self.max_completion_tokens - self._SAFETY_BUFFER
             target = budget // 2
             try:
-                estimated, source = await self.estimate_session_prompt_tokens(session)
+                estimated, source = await self.estimate_session_prompt_tokens(
+                    session,
+                    session_summary=session_summary,
+                )
             except Exception:
                 logger.exception("Token estimation failed for {}", session.key)
                 estimated, source = 0, "error"
@@ -520,9 +534,10 @@ class Consolidator:
                 )
                 return
 
+            last_summary = None
             for round_num in range(self._MAX_CONSOLIDATION_ROUNDS):
                 if estimated <= target:
-                    return
+                    break
 
                 boundary = self.pick_consolidation_boundary(session, max(1, estimated - target))
                 if boundary is None:
@@ -531,7 +546,7 @@ class Consolidator:
                         session.key,
                         round_num,
                     )
-                    return
+                    break
 
                 end_idx = boundary[0]
                 end_idx = self._cap_consolidation_boundary(session, end_idx)
@@ -541,11 +556,11 @@ class Consolidator:
                         session.key,
                         round_num,
                     )
-                    return
+                    break
 
                 chunk = session.messages[session.last_consolidated:end_idx]
                 if not chunk:
-                    return
+                    break
 
                 logger.info(
                     "Token consolidation round {} for {}: {}/{} via {}, chunk={} msgs",
@@ -556,18 +571,34 @@ class Consolidator:
                     source,
                     len(chunk),
                 )
-                if not await self.archive(chunk):
-                    return
+                summary = await self.archive(chunk)
+                if summary:
+                    last_summary = summary
+                else:
+                    break
                 session.last_consolidated = end_idx
                 self.sessions.save(session)
 
                 try:
-                    estimated, source = await self.estimate_session_prompt_tokens(session)
+                    estimated, source = await self.estimate_session_prompt_tokens(
+                        session,
+                        session_summary=session_summary,
+                    )
                 except Exception:
                     logger.exception("Token estimation failed for {}", session.key)
                     estimated, source = 0, "error"
                 if estimated <= 0:
-                    return
+                    break
+
+            # Persist the last summary to session metadata so it can be injected
+            # into the runtime context on the next prepare_session() call, aligning
+            # the summary injection strategy with AutoCompact._archive().
+            if last_summary and last_summary != "(nothing)":
+                session.metadata["_last_summary"] = {
+                    "text": last_summary,
+                    "last_active": session.updated_at.isoformat(),
+                }
+                self.sessions.save(session)
 
 
 # ---------------------------------------------------------------------------
