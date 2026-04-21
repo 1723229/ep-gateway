@@ -472,7 +472,7 @@ def build_status_content(
     if cached and last_in:
         token_line += f" ({cached * 100 // last_in}% cached)"
     lines = [
-        f"\U0001f408 nanobot v{version}",
+        f"\U0001f408 Assistant v{version}",
         f"\U0001f9e0 Model: {model}",
         token_line,
         f"\U0001f4da Context: {ctx_used_str}/{ctx_total_str} ({ctx_pct}% of input budget)",
@@ -511,10 +511,6 @@ def sync_workspace_templates(workspace: Path, silent: bool = False) -> list[str]
     _write(tpl / "memory" / "MEMORY.md", workspace / "memory" / "MEMORY.md")
     _write(None, workspace / "memory" / "history.jsonl")
     (workspace / "skills").mkdir(exist_ok=True)
-
-    for name in ("ERRORS.md", "LEARNINGS.md", "FEATURE_REQUESTS.md"):
-        src = tpl / ".learnings" / name
-        _write(src if src.is_file() else None, workspace / ".learnings" / name)
 
     if added and not silent:
         from rich.console import Console
