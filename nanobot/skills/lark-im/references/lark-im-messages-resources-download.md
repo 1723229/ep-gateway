@@ -68,7 +68,7 @@ lark-cli im +messages-resources-download --message-id om_xxx --file-key img_v3_x
 |---------|---------|---------|
 | Download failed | `file_key` does not match the `message_id` | Make sure the `file_key` came from that message's content |
 | Hit error code 234002 or 14005 | No permission, **not** missing API scope | no access to this chat or file was deleted — do not retry, return the error to the user |
-| Permission denied | `im:message:readonly` is not authorized | Follow the non-blocking auth rule in [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md): have the agent start `auth login --no-wait --scope "im:message:readonly"` internally and return only the authorization link; do not ask the end user to run the command manually |
+| Permission denied | `im:message:readonly` is not authorized | Follow the shared auth rule in [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md): run `python <skill_dir>/scripts/auth_link.py login --scope "im:message:readonly"` internally, extract `auth_url`, and return only that link to the user |
 | File too large | Over the 100 MB limit | This is a Feishu API limitation and cannot be bypassed with this endpoint |
 
 ## References

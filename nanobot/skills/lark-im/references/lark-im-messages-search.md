@@ -204,7 +204,7 @@ lark-cli im +messages-search --query "" --chat-id oc_xxx --sender ou_me --start 
 |---------|---------|---------|
 | Too few results | The time range is too narrow or the keyword is too specific | Expand the time range and try broader keywords |
 | No results | Missing permission or no match | Confirm `search:message` is authorized and relax the filters |
-| Permission denied | Search scope not authorized | Follow the non-blocking auth rule in [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md): have the agent start `auth login --no-wait --scope "search:message"` internally and return only the authorization link; do not ask the end user to run the command manually |
+| Permission denied | Search scope not authorized | Follow the shared auth rule in [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md): run `python <skill_dir>/scripts/auth_link.py login --scope "search:message"` internally, extract `auth_url`, and return only that link to the user |
 
 ## References
 

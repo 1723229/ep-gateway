@@ -18,11 +18,11 @@ metadata:
 
 ## 前置条件
 
-仅支持 **user 身份**。如用户授权缺失或过期，按 [`../lark-shared/SKILL.md`](../lark-shared/SKILL.md) 的非阻塞认证规则在后台发起下列授权，并把授权链接发给用户点击；不要让最终用户执行这些命令。
+仅支持 **user 身份**。如用户授权缺失或过期，按 [`../lark-shared/SKILL.md`](../lark-shared/SKILL.md) 的共享认证规则在后台发起下列授权，并把授权链接发给用户点击；不要让最终用户执行这些命令。
 
 ```bash
-lark-cli auth login --no-wait --domain vc         # 基础（查询+纪要）
-lark-cli auth login --no-wait --domain vc,drive   # 含读取纪要文档正文、生成文档
+python <skill_dir>/scripts/auth_link.py login --domain vc         # 基础（查询+纪要）
+python <skill_dir>/scripts/auth_link.py login --domain vc,drive   # 含读取纪要文档正文、生成文档
 ```
 
 ## 工作流

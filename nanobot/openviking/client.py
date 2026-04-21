@@ -93,6 +93,8 @@ class VikingClient:
             )
 
         self._commit_semaphore = asyncio.Semaphore(1)
+        self._user_memory_scope_available = True
+        self._agent_memory_scope_available = True
 
     def set_max_concurrent_commits(self, n: int) -> None:
         """Update the concurrency limit for commit operations."""
@@ -148,8 +150,8 @@ class VikingClient:
             }
         else:
             raise RuntimeError(
-                "OpenViking local mode on 0.3.3 requires embedding_model and embedding_api_key or embedding_base_url, "
-                "unless an ov.conf file is already present."
+                "OpenViking local mode requires embedding_model and embedding_api_key "
+                "or embedding_base_url unless an ov.conf file is already present."
             )
 
         if vlm_api_key and vlm_base_url and vlm_model:
@@ -366,6 +368,19 @@ class VikingClient:
         result = await self.client.search(query, target_uri=uri)
         return [self._matched_to_dict(m) for m in getattr(result, "memories", [])]
 
+    def _agent_memory_uri(self) -> str:
+        """Return the agent memory URI for the active OpenViking namespace model.
+
+        OpenViking local mode changed between 0.3.3 and 0.3.9:
+        0.3.3 accepts the implicit scope-root form ``viking://agent/memories/``
+        and the hashed agent space URI, while 0.3.9 resolves explicit agent
+        segments as ``agent_id`` ownership and rejects the hashed space name.
+        The scope-root URI works on both versions, so prefer it in local mode.
+        """
+        if self.mode == "local":
+            return "viking://agent/memories/"
+        return f"viking://agent/{self.agent_space_name}/memories/"
+
     async def search_memory(self, query: str, limit: int = 10) -> dict[str, list[Any]]:
         """Search both user and agent memories."""
         uid = self._effective_user_id()
@@ -373,10 +388,20 @@ class VikingClient:
             return {"user_memory": [], "agent_memory": []}
 
         uri_user = f"viking://user/{uid}/memories/"
-        user_result = await self.client.find(query=query, target_uri=uri_user, limit=limit)
+        user_result = await self._find_memory_scope(
+            query=query,
+            target_uri=uri_user,
+            limit=limit,
+            scope_name="user",
+        )
 
-        uri_agent = f"viking://agent/{self.agent_space_name}/memories/"
-        agent_result = await self.client.find(query=query, target_uri=uri_agent, limit=limit)
+        uri_agent = self._agent_memory_uri()
+        agent_result = await self._find_memory_scope(
+            query=query,
+            target_uri=uri_agent,
+            limit=limit,
+            scope_name="agent",
+        )
 
         return {
             "user_memory": getattr(user_result, "memories", []),
@@ -599,8 +624,45 @@ class VikingClient:
             "Development mode does not support account or user management",
             "Requires role:",
             "Permission denied",
+            "Access denied",
         )
         return any(marker in message for marker in markers)
+
+    @staticmethod
+    def _is_optional_memory_scope_error(exc: Exception) -> bool:
+        message = str(exc)
+        markers = (
+            "Access denied",
+            "Permission denied",
+            "Requires role:",
+            "403 Forbidden",
+        )
+        return any(marker in message for marker in markers)
+
+    async def _find_memory_scope(
+        self,
+        *,
+        query: str,
+        target_uri: str,
+        limit: int,
+        scope_name: str,
+    ) -> Any:
+        availability_attr = f"_{scope_name}_memory_scope_available"
+        if getattr(self, availability_attr, True) is False:
+            return None
+
+        try:
+            return await self.client.find(query=query, target_uri=target_uri, limit=limit)
+        except Exception as e:
+            if self._is_optional_memory_scope_error(e):
+                setattr(self, availability_attr, False)
+                logger.debug(
+                    "OpenViking {} memory scope unavailable; disabling further lookups for this session: {}",
+                    scope_name,
+                    e,
+                )
+                return None
+            raise
 
     @staticmethod
     def _is_missing_resource_error(exc: Exception) -> bool:
