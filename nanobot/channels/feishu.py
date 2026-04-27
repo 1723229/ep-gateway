@@ -1461,8 +1461,8 @@ class FeishuChannel(BaseChannel):
             message_id = meta.get("message_id")
             if message_id:
                 reaction_id = self._reaction_ids.pop(message_id, None)
-                if reaction_id:
-                    # await self._remove_reaction(message_id, reaction_id)
+                # if reaction_id:
+                #     await self._remove_reaction(message_id, reaction_id)
                 # Add completion emoji if configured
                 if self.config.done_emoji:
                     await self._add_reaction(message_id, self.config.done_emoji)
