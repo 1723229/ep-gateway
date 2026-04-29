@@ -540,6 +540,7 @@ def serve(
         session_ttl_minutes=runtime_config.agents.defaults.session_ttl_minutes,
         skills_config=runtime_config.agents.defaults.skills,
         consolidation_ratio=runtime_config.agents.defaults.consolidation_ratio,
+        max_messages=runtime_config.agents.defaults.max_messages,
         tools_config=runtime_config.tools,
     )
 
@@ -655,6 +656,7 @@ def _run_gateway(
         session_ttl_minutes=config.agents.defaults.session_ttl_minutes,
         skills_config=config.agents.defaults.skills,
         consolidation_ratio=config.agents.defaults.consolidation_ratio,
+        max_messages=config.agents.defaults.max_messages,
         tools_config=config.tools,
         provider_snapshot_loader=load_provider_snapshot,
         provider_signature=provider_snapshot.signature,
@@ -718,9 +720,11 @@ def _run_gateway(
         from nanobot.utils.evaluator import evaluate_response
 
         reminder_note = (
-            "[Scheduled Task] Timer finished.\n\n"
-            f"Task '{job.name}' has been triggered.\n"
-            f"Scheduled instruction: {job.payload.message}"
+            "The scheduled time has arrived. Deliver this reminder to the user now, "
+            "as a brief and natural message in their language. Speak directly to them — "
+            "do not narrate progress, summarize, include user IDs, or add status reports "
+            "like 'Done' or 'Reminded'.\n\n"
+            f"Reminder: {job.payload.message}"
         )
 
         cron_tool = agent.tools.get("cron")
@@ -794,6 +798,14 @@ def _run_gateway(
         return "cli", "direct"
 
     # Create heartbeat service
+    heartbeat_preamble = (
+        "[Your response will be delivered directly to the user's messaging app. "
+        "Output ONLY the final user-facing message. Never reference internal "
+        "files (HEARTBEAT.md, AWARENESS.md, etc.), your instructions, or your "
+        "decision process. If nothing needs reporting, respond with just "
+        "'All clear.' and nothing else.]\n\n"
+    )
+
     async def on_heartbeat_execute(tasks: str) -> str:
         """Phase 2: execute heartbeat tasks through the full agent loop."""
         channel, chat_id = _pick_heartbeat_target()
@@ -802,7 +814,7 @@ def _run_gateway(
             pass
 
         resp = await agent.process_direct(
-            tasks,
+            heartbeat_preamble + tasks,
             session_key="heartbeat",
             channel=channel,
             chat_id=chat_id,
@@ -1039,6 +1051,7 @@ def agent(
         session_ttl_minutes=config.agents.defaults.session_ttl_minutes,
         skills_config=config.agents.defaults.skills,
         consolidation_ratio=config.agents.defaults.consolidation_ratio,
+        max_messages=config.agents.defaults.max_messages,
         tools_config=config.tools,
     )
     restart_notice = consume_restart_notice_from_env()
