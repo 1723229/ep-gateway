@@ -989,6 +989,42 @@ class TestSkillReviewTracker:
         review_svc.review_turn.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_tracker_notifies_user_when_skill_changes(self):
+        from nanobot.agent.skill_evo.integration import SkillReviewTracker
+        from nanobot.bus.queue import MessageBus
+        from nanobot.config.schema import SkillsConfig
+
+        review_svc = AsyncMock()
+        review_svc.review_turn.return_value = [
+            {"action": "create", "skill": "report-helper"},
+            {"action": "patch", "skill": "csv-cleanup"},
+        ]
+        config = SkillsConfig(
+            review_trigger_iterations=1,
+            review_min_tool_calls=1,
+            notify_user_on_change=True,
+        )
+        tracker = SkillReviewTracker(config, review_svc)
+        bus = MessageBus()
+        msgs = [{"role": "assistant", "tool_calls": [{"function": {"name": "exec"}}]}]
+
+        await tracker.maybe_review(
+            msgs,
+            "key",
+            {"exec"},
+            bus=bus,
+            channel="telegram",
+            chat_id="chat-1",
+        )
+
+        note = await bus.consume_outbound()
+        assert note.channel == "telegram"
+        assert note.chat_id == "chat-1"
+        assert "Skill auto-saved" in note.content
+        assert "**report-helper** (created)" in note.content
+        assert "**csv-cleanup** (updated)" in note.content
+
+    @pytest.mark.asyncio
     async def test_tracker_no_trigger_when_only_iterations_met(self):
         """Iterations met but tool calls below threshold — should NOT trigger."""
         from nanobot.agent.skill_evo.integration import SkillReviewTracker

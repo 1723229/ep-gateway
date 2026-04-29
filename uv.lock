@@ -1255,6 +1255,9 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+http2 = [
+    { name = "h2" },
+]
 socks = [
     { name = "socksio" },
 ]
@@ -2066,6 +2069,9 @@ msteams = [
     { name = "cryptography" },
     { name = "pyjwt" },
 ]
+olostep = [
+    { name = "olostep" },
+]
 openviking = [
     { name = "openviking" },
 ]
@@ -2106,6 +2112,7 @@ requires-dist = [
     { name = "msgpack", specifier = ">=1.1.0,<2.0.0" },
     { name = "nh3", marker = "extra == 'matrix'", specifier = ">=0.2.17,<1.0.0" },
     { name = "oauth-cli-kit", specifier = ">=0.1.3,<1.0.0" },
+    { name = "olostep", marker = "extra == 'olostep'", specifier = ">=0.1.0" },
     { name = "openai", specifier = ">=2.8.0" },
     { name = "openpyxl", specifier = ">=3.1.0,<4.0.0" },
     { name = "openviking", specifier = "==0.3.9" },
@@ -2144,7 +2151,7 @@ requires-dist = [
     { name = "wecom-aibot-sdk-python", specifier = ">=0.1.5" },
     { name = "wecom-aibot-sdk-python", marker = "extra == 'wecom'", specifier = ">=0.1.5" },
 ]
-provides-extras = ["api", "wecom", "weixin", "msteams", "matrix", "openviking", "discord", "langsmith", "pdf", "dev"]
+provides-extras = ["api", "wecom", "weixin", "msteams", "matrix", "openviking", "discord", "langsmith", "pdf", "olostep", "dev"]
 
 [[package]]
 name = "nh3"
@@ -2200,6 +2207,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/69/1b/077b508e3e500e1629d366249c3ccb32f95e50258b231705c09e3c7a4366/olefile-0.47.zip", hash = "sha256:599383381a0bf3dfbd932ca0ca6515acd174ed48870cbf7fee123d698c192c1c", size = 112240, upload-time = "2023-12-01T16:22:53.025Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/17/d3/b64c356a907242d719fc668b71befd73324e47ab46c8ebbbede252c154b2/olefile-0.47-py2.py3-none-any.whl", hash = "sha256:543c7da2a7adadf21214938bb79c83ea12b473a4b6ee4ad4bf854e7715e13d1f", size = 114565, upload-time = "2023-12-01T16:22:51.518Z" },
+]
+
+[[package]]
+name = "olostep"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx", extra = ["http2"] },
+    { name = "pycountry" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/71/c3/fcb95b1752e222cccf94e13914de3323b489ecabf9e187a93439914531c4/olostep-1.0.4.tar.gz", hash = "sha256:9e0005d8f7bd6d12974feff48c510176d1bf6f3d58c6f5b3518fb858389e7125", size = 68301, upload-time = "2026-03-17T17:50:05.937Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/4b/eb17f831a85b4b722a9480649f9180b64d2767c103dfd74df9536296ef4f/olostep-1.0.4-py3-none-any.whl", hash = "sha256:fffdd4bedcd24819656f2a8bd5ff0f8ad3c9e34ba8872ab4829164731236d67d", size = 78220, upload-time = "2026-03-17T17:50:04.526Z" },
 ]
 
 [[package]]
@@ -2798,6 +2819,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/98/ff/fec109ceb715d2a6b4c4a85a61af3b40c723a961e8828319fbcb15b868dc/py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719", size = 207796, upload-time = "2021-11-04T17:17:01.377Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f6/f0/10642828a8dfb741e5f3fbaac830550a518a775c7fff6f04a007259b0548/py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378", size = 98708, upload-time = "2021-11-04T17:17:00.152Z" },
+]
+
+[[package]]
+name = "pycountry"
+version = "24.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/57/c389fa68c50590881a75b7883eeb3dc15e9e73a0fdc001cdd45c13290c92/pycountry-24.6.1.tar.gz", hash = "sha256:b61b3faccea67f87d10c1f2b0fc0be714409e8fcdcc1315613174f6466c10221", size = 6043910, upload-time = "2024-06-01T04:12:15.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/ec/1fb891d8a2660716aadb2143235481d15ed1cbfe3ad669194690b0604492/pycountry-24.6.1-py3-none-any.whl", hash = "sha256:f1a4fb391cd7214f8eefd39556d740adcc233c778a27f8942c8dca351d6ce06f", size = 6335189, upload-time = "2024-06-01T04:11:49.711Z" },
 ]
 
 [[package]]

@@ -181,7 +181,7 @@ class SkillReviewTracker:
             note = "\U0001f4be Skill auto-saved: " + ", ".join(parts)
             try:
                 from nanobot.bus.events import OutboundMessage
-                await bus.publish(OutboundMessage(
+                await bus.publish_outbound(OutboundMessage(
                     channel=channel, chat_id=chat_id, content=note,
                 ))
             except Exception:

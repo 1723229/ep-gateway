@@ -234,6 +234,14 @@ class TestReviewMetadata:
 
 
 class TestReviewMode:
+    def test_default_review_config_enables_auto_create_notifications(self):
+        from nanobot.config.schema import SkillsConfig
+
+        config = SkillsConfig()
+        assert config.review_enabled is True
+        assert config.review_mode == "auto_create"
+        assert config.notify_user_on_change is True
+
     @pytest.mark.asyncio
     async def test_auto_create_allows_create(self):
         from nanobot.config.schema import SkillsConfig
