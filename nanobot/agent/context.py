@@ -71,7 +71,11 @@ class ContextBuilder:
         self._profile_cache_time = now
         return profile
 
-    async def build_system_prompt(self, skill_names: list[str] | None = None,channel: str | None = None,) -> str:
+    async def build_system_prompt(
+        self,
+        skill_names: list[str] | None = None,
+        channel: str | None = None,
+    ) -> str:
         """Build the system prompt from identity, bootstrap files, memory, and skills."""
         parts = [self._get_identity(channel=channel)]
 
@@ -132,8 +136,6 @@ class ContextBuilder:
         session_summary: str | None = None,
         sender_id: str | None = None,
         sender_name: str | None = None,
-        channel: str | None, chat_id: str | None, timezone: str | None = None,
-        session_summary: str | None = None, sender_id: str | None = None,
     ) -> str:
         """Build untrusted runtime metadata block for injection before the user message."""
         lines = [f"Current Time: {current_time_str(timezone)}"]
@@ -143,7 +145,6 @@ class ContextBuilder:
             lines.append(f"Sender ID: {sender_id}")
         if sender_name:
             lines.append(f"Sender Name: {sender_name}")
-            lines += [f"Sender ID: {sender_id}"]
         if session_summary:
             lines += ["", "[Resumed Session]", session_summary]
         return ContextBuilder._RUNTIME_CONTEXT_TAG + "\n" + "\n".join(lines) + "\n" + ContextBuilder._RUNTIME_CONTEXT_END
@@ -195,7 +196,6 @@ class ContextBuilder:
         sender_name: str | None = None,
         current_role: str = "user",
         session_summary: str | None = None,
-        sender_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Build the complete message list for an LLM call."""
         runtime_ctx = self._build_runtime_context(
