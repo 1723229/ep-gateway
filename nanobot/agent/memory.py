@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import weakref
+from contextlib import suppress
 import tiktoken
 from datetime import datetime
 from pathlib import Path
@@ -316,10 +318,8 @@ class MemoryStore:
     def _next_cursor(self) -> int:
         """Read the current cursor counter and return the next value."""
         if self._cursor_file.exists():
-            try:
+            with suppress(ValueError, OSError):
                 return int(self._cursor_file.read_text(encoding="utf-8").strip()) + 1
-            except (ValueError, OSError):
-                pass
         # Fast path: trust the tail when intact.  Otherwise scan the whole
         # file and take ``max`` — that stays correct even if the monotonic
         # invariant was broken by external writes.
@@ -348,7 +348,7 @@ class MemoryStore:
     def _read_entries(self) -> list[dict[str, Any]]:
         """Read all entries from history.jsonl."""
         entries: list[dict[str, Any]] = []
-        try:
+        with suppress(FileNotFoundError):
             with open(self.history_file, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
@@ -357,8 +357,7 @@ class MemoryStore:
                             entries.append(json.loads(line))
                         except json.JSONDecodeError:
                             continue
-        except FileNotFoundError:
-            pass
+
         return entries
 
     def _read_last_entry(self) -> dict[str, Any] | None:
@@ -380,19 +379,36 @@ class MemoryStore:
             return None
 
     def _write_entries(self, entries: list[dict[str, Any]]) -> None:
-        """Overwrite history.jsonl with the given entries."""
-        with open(self.history_file, "w", encoding="utf-8") as f:
-            for entry in entries:
-                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        """Overwrite history.jsonl with the given entries (atomic write)."""
+        tmp_path = self.history_file.with_suffix(self.history_file.suffix + ".tmp")
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                for entry in entries:
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self.history_file)
+
+            # fsync the directory so the rename is durable.
+            # On Windows, opening a directory with O_RDONLY raises
+            # PermissionError — skip the dir sync there (NTFS
+            # journals metadata synchronously).
+            with suppress(PermissionError):
+                fd = os.open(str(self.history_file.parent), os.O_RDONLY)
+                try:
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     # -- dream cursor --------------------------------------------------------
 
     def get_last_dream_cursor(self) -> int:
         if self._dream_cursor_file.exists():
-            try:
+            with suppress(ValueError, OSError):
                 return int(self._dream_cursor_file.read_text(encoding="utf-8").strip())
-            except (ValueError, OSError):
-                pass
         return 0
 
     def set_last_dream_cursor(self, cursor: int) -> None:
@@ -523,6 +539,7 @@ class Consolidator:
             channel=channel,
             chat_id=chat_id,
             session_summary=session_summary,
+            sender_id=None,
         )
         return estimate_prompt_tokens_chain(
             self.provider,
@@ -753,17 +770,22 @@ class Dream:
         """Build a minimal tool registry for the Dream agent."""
         from nanobot.agent.skill_evo.integration import build_dream_skill_tools
         from nanobot.agent.skills import BUILTIN_SKILLS_DIR
-        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool
+        from nanobot.agent.tools.file_state import FileStates
+        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool, WriteFileTool
 
         tools = ToolRegistry()
         workspace = self.store.workspace
         extra_read = [BUILTIN_SKILLS_DIR] if BUILTIN_SKILLS_DIR.exists() else None
+        # Dream gets its own FileStates so its caches stay isolated from the
+        # main loop's sessions (issue #3571).
+        file_states = FileStates()
         tools.register(ReadFileTool(
             workspace=workspace,
             allowed_dir=workspace,
             extra_allowed_dirs=extra_read,
+            file_states=file_states,
         ))
-        tools.register(EditFileTool(workspace=workspace, allowed_dir=workspace))
+        tools.register(EditFileTool(workspace=workspace, allowed_dir=workspace, file_states=file_states))
 
         skill_tools = build_dream_skill_tools(workspace)
         for name in skill_tools.tool_names:
@@ -974,12 +996,10 @@ class Dream:
                 if event["status"] == "ok":
                     changelog.append(f"{event['name']}: {event['detail']}")
 
-        # Advance cursor — always, to avoid re-processing Phase 1
-        new_cursor = batch[-1]["cursor"]
-        self.store.set_last_dream_cursor(new_cursor)
-        self.store.compact_history()
-
+        # Only advance cursor on successful completion to prevent silent loss
         if result and result.stop_reason == "completed":
+            new_cursor = batch[-1]["cursor"]
+            self.store.set_last_dream_cursor(new_cursor)
             logger.info(
                 "Dream done: {} change(s), cursor advanced to {}",
                 len(changelog), new_cursor,
@@ -987,9 +1007,11 @@ class Dream:
         else:
             reason = result.stop_reason if result else "exception"
             logger.warning(
-                "Dream incomplete ({}): cursor advanced to {}",
-                reason, new_cursor,
+                "Dream incomplete ({}): cursor NOT advanced, will retry next cron cycle",
+                reason,
             )
+
+        self.store.compact_history()
 
         # Git auto-commit (only when there are actual changes)
         if changelog and self.store.git.is_initialized():

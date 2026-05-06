@@ -7,6 +7,7 @@ import base64
 import mimetypes
 import platform
 import time
+from contextlib import suppress
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -131,6 +132,8 @@ class ContextBuilder:
         session_summary: str | None = None,
         sender_id: str | None = None,
         sender_name: str | None = None,
+        channel: str | None, chat_id: str | None, timezone: str | None = None,
+        session_summary: str | None = None, sender_id: str | None = None,
     ) -> str:
         """Build untrusted runtime metadata block for injection before the user message."""
         lines = [f"Current Time: {current_time_str(timezone)}"]
@@ -140,6 +143,7 @@ class ContextBuilder:
             lines.append(f"Sender ID: {sender_id}")
         if sender_name:
             lines.append(f"Sender Name: {sender_name}")
+            lines += [f"Sender ID: {sender_id}"]
         if session_summary:
             lines += ["", "[Resumed Session]", session_summary]
         return ContextBuilder._RUNTIME_CONTEXT_TAG + "\n" + "\n".join(lines) + "\n" + ContextBuilder._RUNTIME_CONTEXT_END
@@ -173,12 +177,10 @@ class ContextBuilder:
     @staticmethod
     def _is_template_content(content: str, template_path: str) -> bool:
         """Check if *content* is identical to the bundled template (user hasn't customized it)."""
-        try:
+        with suppress(Exception):
             tpl = pkg_files("nanobot") / "templates" / template_path
             if tpl.is_file():
                 return content.strip() == tpl.read_text(encoding="utf-8").strip()
-        except Exception:
-            pass
         return False
 
     async def build_messages(
@@ -193,6 +195,7 @@ class ContextBuilder:
         sender_name: str | None = None,
         current_role: str = "user",
         session_summary: str | None = None,
+        sender_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Build the complete message list for an LLM call."""
         runtime_ctx = self._build_runtime_context(
