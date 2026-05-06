@@ -160,7 +160,7 @@ pip install nanobot-ai
 nanobot onboard
 ```
 
-**2. Configure** (`~/.nanobot/config.json`)
+**2. Configure** (`~/.hiperone/config.json`)
 
 Configure these **two parts** in your config (other options have defaults). Add or merge the following blocks into your existing config instead of replacing the whole file.
 
@@ -209,7 +209,7 @@ nanobot agent
   <img src="images/nanobot_webui.png" alt="nanobot webui preview" width="900">
 </p>
 
-**1. Enable the WebSocket channel in `~/.nanobot/config.json`**
+**1. Enable the WebSocket channel in `~/.hiperone/config.json`**
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }

@@ -41,10 +41,10 @@ def test_system_prompt_stays_stable_when_clock_changes(tmp_path, monkeypatch) ->
     builder = ContextBuilder(workspace)
 
     _FakeDatetime.current = real_datetime(2026, 2, 24, 13, 59)
-    prompt1 = builder.build_system_prompt()
+    prompt1 = asyncio.run(builder.build_system_prompt())
 
     _FakeDatetime.current = real_datetime(2026, 2, 24, 14, 0)
-    prompt2 = builder.build_system_prompt()
+    prompt2 = asyncio.run(builder.build_system_prompt())
 
     assert prompt1 == prompt2
 
@@ -53,7 +53,7 @@ def test_system_prompt_reflects_current_dream_memory_contract(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
 
     assert "memory/history.jsonl" in prompt
     assert "automatically managed by Dream" in prompt
@@ -67,12 +67,12 @@ def test_runtime_context_is_separate_untrusted_user_message(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    messages = builder.build_messages(
+    messages = asyncio.run(builder.build_messages(
         history=[],
         current_message="Return exactly: OK",
         channel="cli",
         chat_id="direct",
-    )
+    ))
 
     assert messages[0]["role"] == "system"
     assert "## Current Session" not in messages[0]["content"]
@@ -93,13 +93,13 @@ def test_runtime_context_includes_sender_id_when_provided(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    messages = builder.build_messages(
+    messages = asyncio.run(builder.build_messages(
         history=[],
         current_message="Return exactly: OK",
         channel="cli",
         chat_id="direct",
         sender_id="user-12345",
-    )
+    ))
 
     user_content = messages[-1]["content"]
     assert isinstance(user_content, str)
@@ -111,13 +111,13 @@ def test_runtime_context_excludes_sender_id_when_not_provided(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    messages = builder.build_messages(
+    messages = asyncio.run(builder.build_messages(
         history=[],
         current_message="Return exactly: OK",
         channel="cli",
         chat_id="direct",
         sender_id=None,
-    )
+    ))
 
     user_content = messages[-1]["content"]
     assert isinstance(user_content, str)
@@ -132,7 +132,7 @@ def test_unprocessed_history_injected_into_system_prompt(tmp_path) -> None:
     builder.memory.append_history("User asked about weather in Tokyo")
     builder.memory.append_history("Agent fetched forecast via web_search")
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     assert "# Recent History" in prompt
     assert "User asked about weather in Tokyo" in prompt
     assert "Agent fetched forecast via web_search" in prompt
@@ -147,7 +147,7 @@ def test_recent_history_capped_at_max(tmp_path) -> None:
     for i in range(builder._MAX_RECENT_HISTORY + 20):
         builder.memory.append_history(f"entry-{i}")
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     assert "entry-0" not in prompt
     assert "entry-19" not in prompt
     assert f"entry-{builder._MAX_RECENT_HISTORY + 19}" in prompt
@@ -161,7 +161,7 @@ def test_recent_history_truncated_at_max_chars(tmp_path) -> None:
     big_entry = "x" * (builder._MAX_HISTORY_CHARS + 5_000)
     builder.memory.append_history(big_entry)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     history_section = prompt.split("# Recent History\n\n", 1)
     assert len(history_section) == 2
     assert len(history_section[1]) < builder._MAX_HISTORY_CHARS + 200
@@ -175,7 +175,7 @@ def test_no_recent_history_when_dream_has_processed_all(tmp_path) -> None:
     cursor = builder.memory.append_history("already processed entry")
     builder.memory.set_last_dream_cursor(cursor)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     assert "# Recent History" not in prompt
 
 
@@ -191,7 +191,7 @@ def test_partial_dream_processing_shows_only_remainder(tmp_path) -> None:
 
     builder.memory.set_last_dream_cursor(c2)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     assert "# Recent History" in prompt
     assert "old conversation about Python" not in prompt
     assert "old conversation about Rust" not in prompt
@@ -207,7 +207,7 @@ def test_execution_rules_in_system_prompt(tmp_path) -> None:
     sync_workspace_templates(workspace, silent=True)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
     assert "single-step tasks" in prompt
     assert "multi-step tasks" in prompt
     assert "Read before you write" in prompt
@@ -231,7 +231,7 @@ def test_system_prompt_does_not_warn_about_message_time_markers(tmp_path) -> Non
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
 
     assert "Message Time" not in prompt
 
@@ -249,7 +249,7 @@ def test_channel_format_hint_telegram(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt(channel="telegram")
+    prompt = asyncio.run(builder.build_system_prompt(channel="telegram"))
     assert "Format Hint" in prompt
     assert "messaging app" in prompt
 
@@ -259,19 +259,18 @@ def test_channel_format_hint_whatsapp(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt(channel="whatsapp")
+    prompt = asyncio.run(builder.build_system_prompt(channel="whatsapp"))
     assert "Format Hint" in prompt
     assert "plain text only" in prompt
 
 
 def test_channel_hint_feishu(tmp_path) -> None:
-    """Feishu should get a channel hint that forbids pushing lark-cli commands to users."""
+    """Feishu should expose Lark/Feishu skills without generic format hints."""
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
     prompt = asyncio.run(builder.build_system_prompt(channel="feishu"))
-    assert "Channel Hint" in prompt
-    assert "return links only" in prompt
+    assert "Format Hint" not in prompt
     assert "lark-cli" in prompt
 
 
@@ -280,10 +279,10 @@ def test_channel_format_hint_absent_for_unknown(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt(channel=None)
+    prompt = asyncio.run(builder.build_system_prompt(channel=None))
     assert "Format Hint" not in prompt
 
-    prompt2 = builder.build_system_prompt(channel="feishu")
+    prompt2 = asyncio.run(builder.build_system_prompt(channel="feishu"))
     assert "Format Hint" not in prompt2
 
 
@@ -292,10 +291,10 @@ def test_build_messages_passes_channel_to_system_prompt(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    messages = builder.build_messages(
+    messages = asyncio.run(builder.build_messages(
         history=[], current_message="hi",
         channel="telegram", chat_id="123",
-    )
+    ))
     system = messages[0]["content"]
     assert "Format Hint" in system
     assert "messaging app" in system
@@ -305,13 +304,13 @@ def test_subagent_result_does_not_create_consecutive_assistant_messages(tmp_path
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    messages = builder.build_messages(
+    messages = asyncio.run(builder.build_messages(
         history=[{"role": "assistant", "content": "previous result"}],
         current_message="subagent result",
         channel="cli",
         chat_id="direct",
         current_role="assistant",
-    )
+    ))
 
     for left, right in zip(messages, messages[1:]):
         assert not (left.get("role") == right.get("role") == "assistant")
@@ -322,7 +321,7 @@ def test_always_skills_excluded_from_skills_index(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
 
     # memory skill should be in Active Skills section
     assert "# Active Skills" in prompt
@@ -342,7 +341,7 @@ def test_template_memory_md_is_skipped(tmp_path) -> None:
     sync_workspace_templates(workspace, silent=True)
 
     builder = ContextBuilder(workspace)
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
 
     # The "# Memory\n\n## Long-term Memory" block is produced only by
     # build_system_prompt() when MEMORY.md is injected.  The memory skill
@@ -363,7 +362,7 @@ def test_customized_memory_md_is_injected(tmp_path) -> None:
     )
 
     builder = ContextBuilder(workspace)
-    prompt = builder.build_system_prompt()
+    prompt = asyncio.run(builder.build_system_prompt())
 
     assert "# Memory\n\n## Long-term Memory" in prompt
     assert "User prefers dark mode" in prompt

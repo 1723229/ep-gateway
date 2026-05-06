@@ -3,9 +3,9 @@
 ## Docker
 
 > [!TIP]
-> The `-v ~/.nanobot:/home/nanobot/.nanobot` flag mounts your local config directory into the container, so your config and workspace persist across container restarts.
-> The container runs as the non-root user `nanobot` (UID 1000) and reads config from `/home/nanobot/.nanobot`. Always mount your host config directory to `/home/nanobot/.nanobot`, not `/root/.nanobot`.
-> If you get **Permission denied**, fix ownership on the host first: `sudo chown -R 1000:1000 ~/.nanobot`, or pass `--user $(id -u):$(id -g)` to match your host UID. Podman users can use `--userns=keep-id` instead.
+> The `-v ~/.hiperone:/root/.hiperone` flag mounts your local config directory into the container, so your config and workspace persist across container restarts.
+> The container currently runs as root and reads config from `/root/.hiperone`. Always mount your host config directory to `/root/.hiperone`.
+> If you get **Permission denied**, fix ownership on the host first: `sudo chown -R root:root ~/.hiperone`, or pass `--user $(id -u):$(id -g)` and mount to that user's home directory consistently.
 >
 > [!IMPORTANT]
 > Official Docker usage currently means building from this repository with the included `Dockerfile`. Docker Hub images under third-party namespaces are not maintained or verified by HKUDS/nanobot; do not mount API keys or bot tokens into them unless you trust the publisher.
@@ -14,7 +14,7 @@
 
 ```bash
 docker compose run --rm nanobot-cli onboard   # first-time setup
-vim ~/.nanobot/config.json                     # add API keys
+vim ~/.hiperone/config.json                    # add API keys
 docker compose up -d nanobot-gateway           # start gateway
 ```
 
@@ -31,17 +31,17 @@ docker compose down                                      # stop
 docker build -t nanobot .
 
 # Initialize config (first time only)
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot onboard
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot onboard
 
 # Edit config on host to add API keys
-vim ~/.nanobot/config.json
+vim ~/.hiperone/config.json
 
 # Run gateway (connects to enabled channels, e.g. Telegram/Discord/Mochat)
-docker run -v ~/.nanobot:/home/nanobot/.nanobot -p 18790:18790 nanobot gateway
+docker run -v ~/.hiperone:/root/.hiperone -p 18790:18790 nanobot gateway
 
 # Or run a single command
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot agent -m "Hello!"
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot status
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot agent -m "Hello!"
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot status
 ```
 
 ## Linux Service
@@ -124,11 +124,11 @@ Use that exact path in the plist. It keeps the Python environment from your inst
     <string>/Users/youruser/.local/bin/nanobot</string>
     <string>gateway</string>
     <string>--workspace</string>
-    <string>/Users/youruser/.nanobot/workspace</string>
+    <string>/Users/youruser/.hiperone/workspace</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/youruser/.nanobot/workspace</string>
+  <string>/Users/youruser/.hiperone/workspace</string>
 
   <key>RunAtLoad</key>
   <true/>
@@ -140,10 +140,10 @@ Use that exact path in the plist. It keeps the Python environment from your inst
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/Users/youruser/.nanobot/logs/gateway.log</string>
+  <string>/Users/youruser/.hiperone/logs/gateway.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/youruser/.nanobot/logs/gateway.error.log</string>
+  <string>/Users/youruser/.hiperone/logs/gateway.error.log</string>
 </dict>
 </plist>
 ```
@@ -151,7 +151,7 @@ Use that exact path in the plist. It keeps the Python environment from your inst
 **3. Load and start it:**
 
 ```bash
-mkdir -p ~/Library/LaunchAgents ~/.nanobot/logs
+mkdir -p ~/Library/LaunchAgents ~/.hiperone/logs
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.nanobot.gateway.plist
 launchctl enable gui/$(id -u)/ai.nanobot.gateway
 launchctl kickstart -k gui/$(id -u)/ai.nanobot.gateway
