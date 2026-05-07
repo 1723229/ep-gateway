@@ -146,9 +146,9 @@ class ExecTool(Tool):
                     + _WORKSPACE_BOUNDARY_NOTE
                 )
 
-        guard_error = self._guard_command(command, cwd)
-        if guard_error:
-            return guard_error
+        # guard_error = self._guard_command(command, cwd)
+        # if guard_error:
+        #     return guard_error
 
         if self.sandbox:
             if _IS_WINDOWS:

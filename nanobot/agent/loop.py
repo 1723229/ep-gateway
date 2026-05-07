@@ -32,6 +32,7 @@ from nanobot.agent.tools.file_state import FileStateStore, bind_file_states, res
 from nanobot.agent.tools.filesystem import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
 from nanobot.agent.tools.message import MessageTool
 from nanobot.agent.tools.notebook import NotebookEditTool
+from nanobot.agent.tools.platform_access import register_platform_access_tools
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.agent.tools.search import GlobTool, GrepTool
 from nanobot.agent.tools.self import MyTool
@@ -58,7 +59,7 @@ from nanobot.utils.runtime import EMPTY_FINAL_RESPONSE_MESSAGE
 from nanobot.utils.webui_titles import mark_webui_session, maybe_generate_webui_title_after_turn
 
 if TYPE_CHECKING:
-    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, ToolsConfig, WebToolsConfig
+    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, OpenVikingConfig, ToolsConfig, WebToolsConfig
     from nanobot.cron.service import CronService
 
 
@@ -207,6 +208,7 @@ class AgentLoop:
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
         channels_config: ChannelsConfig | None = None,
+        openviking_config: OpenVikingConfig | None = None,
         timezone: str | None = None,
         session_ttl_minutes: int = 0,
         consolidation_ratio: float = 0.5,
@@ -214,14 +216,16 @@ class AgentLoop:
         hooks: list[AgentHook] | None = None,
         unified_session: bool = False,
         disabled_skills: list[str] | None = None,
+        skills_config: Any | None = None,
         tools_config: ToolsConfig | None = None,
         provider_snapshot_loader: Callable[[], ProviderSnapshot] | None = None,
         provider_signature: tuple[object, ...] | None = None,
     ):
-        from nanobot.config.schema import ExecToolConfig, ToolsConfig, WebToolsConfig
+        from nanobot.config.schema import ExecToolConfig, SkillsConfig, ToolsConfig, WebToolsConfig
 
         _tc = tools_config or ToolsConfig()
         defaults = AgentDefaults()
+        self.skills_config = skills_config or SkillsConfig()
         self.bus = bus
         self.channels_config = channels_config
         self.provider = provider
@@ -275,6 +279,11 @@ class AgentLoop:
             disabled_skills=disabled_skills,
             max_iterations=self.max_iterations,
         )
+
+        self.openviking_config = openviking_config
+        self._current_session_key: str = "default"
+        self._viking_client_initialized = False
+
         self._unified_session = unified_session
         self._max_messages = max_messages if max_messages > 0 else 120
         self._running = False
@@ -316,6 +325,14 @@ class AgentLoop:
             model=self.model,
         )
         self._register_default_tools()
+
+        from nanobot.agent.skill_evo.integration import SkillReviewTracker, create_review_service
+        review_svc = create_review_service(
+            provider, self.model, getattr(self, "_skill_store", None),
+            self.context.skills, self.skills_config,
+        )
+        self._skill_tracker = SkillReviewTracker(self.skills_config, review_svc)
+
         if _tc.my.enable:
             self.tools.register(MyTool(loop=self, modify_allowed=_tc.my.allow_set))
         self._runtime_vars: dict[str, Any] = {}
@@ -406,10 +423,78 @@ class AgentLoop:
             )
         self.tools.register(MessageTool(send_callback=self.bus.publish_outbound, workspace=self.workspace))
         self.tools.register(SpawnTool(manager=self.subagents))
+        register_platform_access_tools(self.tools)
         if self.cron_service:
             self.tools.register(
                 CronTool(self.cron_service, default_timezone=self.context.timezone or "UTC")
             )
+
+        from nanobot.agent.skill_evo.integration import register_skill_tools
+        self._skill_store = register_skill_tools(
+            self.tools, self.context.skills, self.workspace, self.skills_config,
+        )
+
+        if self.openviking_config and self.openviking_config.enabled:
+            self._register_openviking_tools()
+
+    async def _ensure_viking_client(self) -> None:
+        """Lazily create VikingClient and inject into ContextBuilder and tools."""
+        if self._viking_client_initialized:
+            return
+        self._viking_client_initialized = True
+        if not (self.openviking_config and self.openviking_config.enabled):
+            return
+        try:
+            from nanobot.openviking import HAS_OPENVIKING
+            if not HAS_OPENVIKING:
+                return
+            from nanobot.openviking.client import VikingClient
+            client = await VikingClient.from_openviking_config(self.openviking_config)
+
+            max_commits = getattr(self.openviking_config, "max_concurrent_commits", 1)
+            client.set_max_concurrent_commits(max_commits)
+
+            self.context.set_viking_client(client)
+
+            from nanobot.agent.tools.openviking import _OVTool
+            _OVTool._shared_client = client
+
+            logger.info("OpenViking client initialised (mode={})", self.openviking_config.mode)
+        except Exception:
+            logger.exception("Failed to initialise OpenViking client — continuing without it")
+
+    def _register_openviking_tools(self) -> None:
+        """Register OpenViking tools when enabled."""
+        try:
+            from nanobot.openviking import HAS_OPENVIKING
+            if not HAS_OPENVIKING:
+                logger.warning("OpenViking enabled in config but package not installed")
+                return
+
+            from nanobot.agent.tools.openviking import (
+                OVReadTool,
+                OVListTool,
+                OVSearchTool,
+                OVGrepTool,
+                OVGlobTool,
+                OVUserMemorySearchTool,
+                OVMemoryCommitTool,
+                OVAddResourceTool,
+            )
+
+            tool_classes = (OVReadTool, OVListTool, OVSearchTool, OVGrepTool, OVGlobTool,
+                            OVUserMemorySearchTool, OVAddResourceTool)
+            for cls in tool_classes:
+                self.tools.register(cls(ov_config=self.openviking_config))
+
+            self.tools.register(OVMemoryCommitTool(
+                ov_config=self.openviking_config,
+                session_key_fn=lambda: self._current_session_key,
+                background_task_scheduler=self._schedule_background,
+            ))
+            logger.info("Registered {} OpenViking tools", len(tool_classes) + 1)
+        except Exception:
+            logger.exception("Failed to register OpenViking tools")
 
     async def _connect_mcp(self) -> None:
         """Connect to configured MCP servers (one-time, lazy)."""
@@ -677,6 +762,7 @@ class AgentLoop:
         """Run the agent loop, dispatching messages as tasks to stay responsive to /stop."""
         self._running = True
         await self._connect_mcp()
+        await self._ensure_viking_client()
         logger.info("Agent loop started")
 
         while self._running:
@@ -967,7 +1053,7 @@ class AgentLoop:
 
             # Subagent content is already in `history` above; passing it again
             # as current_message would double-project it into the prompt.
-            messages = self.context.build_messages(
+            messages = await self.context.build_messages(
                 history=history,
                 current_message="" if is_subagent else msg.content,
                 channel=channel,
@@ -1022,6 +1108,7 @@ class AgentLoop:
         logger.info("Processing message from {}:{}: {}", msg.channel, msg.sender_id, preview)
 
         key = session_key or msg.session_key
+        self._current_session_key = key
         session = self.sessions.get_or_create(key)
         mark_webui_session(session, msg.metadata)
         if self._restore_runtime_checkpoint(session):
@@ -1060,13 +1147,13 @@ class AgentLoop:
         pending_ask_id = pending_ask_user_id(history)
         if pending_ask_id:
             initial_messages = ask_user_tool_result_messages(
-                self.context.build_system_prompt(channel=msg.channel),
+                await self.context.build_system_prompt(channel=msg.channel),
                 history,
                 pending_ask_id,
                 msg.content,
             )
         else:
-            initial_messages = self.context.build_messages(
+            initial_messages = await self.context.build_messages(
                 history=history,
                 current_message=msg.content,
                 session_summary=pending,
@@ -1074,6 +1161,7 @@ class AgentLoop:
                 channel=msg.channel,
                 chat_id=self._runtime_chat_id(msg),
                 sender_id=msg.sender_id,
+                sender_name=msg.metadata.get("sender_name"),
             )
 
         async def _bus_progress(
@@ -1123,7 +1211,7 @@ class AgentLoop:
             self.sessions.save(session)
             user_persisted_early = True
 
-        final_content, _, all_msgs, stop_reason, had_injections = await self._run_agent_loop(
+        final_content, tools_used, all_msgs, stop_reason, had_injections = await self._run_agent_loop(
             initial_messages,
             on_progress=on_progress or _bus_progress,
             on_stream=on_stream,
@@ -1149,6 +1237,15 @@ class AgentLoop:
         self._clear_runtime_checkpoint(session)
         self.sessions.save(session)
         self._schedule_background(self.consolidator.maybe_consolidate_by_tokens(session))
+
+        if self._skill_tracker.active:
+            self._schedule_background(
+                self._skill_tracker.maybe_review(
+                    all_msgs, key,
+                    set(tools_used) if tools_used else set(),
+                    bus=self.bus, channel=msg.channel, chat_id=msg.chat_id,
+                )
+            )
 
         # When follow-up messages were injected mid-turn, a later natural
         # language reply may address those follow-ups and should not be
@@ -1226,6 +1323,8 @@ class AgentLoop:
         for m in messages[skip:]:
             entry = dict(m)
             role, content = entry.get("role"), entry.get("content")
+            if role == "system":
+                continue  # skip system messages (prompts, OpenViking memory injection)
             if role == "assistant" and not content and not entry.get("tool_calls"):
                 continue  # skip empty assistant messages — they poison session context
             if role == "tool":
