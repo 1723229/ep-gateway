@@ -771,7 +771,7 @@ class Dream:
         from nanobot.agent.skill_evo.integration import build_dream_skill_tools
         from nanobot.agent.skills import BUILTIN_SKILLS_DIR
         from nanobot.agent.tools.file_state import FileStates
-        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool, WriteFileTool
+        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool
 
         tools = ToolRegistry()
         workspace = self.store.workspace
