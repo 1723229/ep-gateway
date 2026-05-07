@@ -1526,33 +1526,20 @@ class FeishuChannel(BaseChannel):
                 },
                 ensure_ascii=False,
             )
-            # Fallback: reply via the Reply API for group chats.
-            # Target message_id — the Feishu API keeps the reply in
-            # the same topic automatically.
-            _f_msg = meta.get("message_id")
-            fallback_msg_id = _f_msg if meta.get("chat_type", "group") == "group" else None
+            # Fallback replies stay in existing topics, but only create a
+            # new topic when reply-to-message is enabled.
+            fallback_msg_id = self._thread_reply_target(meta)
             if fallback_msg_id:
                 await loop.run_in_executor(
                     None, lambda: self._reply_message_sync(
                         fallback_msg_id, "interactive", card,
-                        reply_in_thread=True,
+                        reply_in_thread=self._should_use_reply_in_thread(meta),
                     ),
                 )
             else:
-                # Fallback replies stay in existing topics, but only create a
-                # new topic when reply-to-message is enabled.
-                fallback_msg_id = self._thread_reply_target(meta)
-                if fallback_msg_id:
-                    await loop.run_in_executor(
-                        None, lambda: self._reply_message_sync(
-                            fallback_msg_id, "interactive", card,
-                            reply_in_thread=self._should_use_reply_in_thread(meta),
-                        ),
-                    )
-                else:
-                    await loop.run_in_executor(
-                        None, self._send_message_sync, rid_type, chat_id, "interactive", card
-                    )
+                await loop.run_in_executor(
+                    None, self._send_message_sync, rid_type, chat_id, "interactive", card
+                )
             return
 
         # --- accumulate delta ---
@@ -1767,6 +1754,9 @@ class FeishuChannel(BaseChannel):
             chat_id = message.chat_id
             chat_type = message.chat_type
             msg_type = message.message_type
+
+            # if not self.is_allowed(sender_id):
+            #     return
 
             loop = asyncio.get_running_loop()
 
