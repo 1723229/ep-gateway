@@ -1864,15 +1864,10 @@ class FeishuChannel(BaseChannel):
             if not content and not media_paths:
                 return
 
-            # Build topic-scoped session key for conversation isolation.
-            # Group chat: thread replies (root_id != message_id) get a scoped
-            # session so each Feishu thread has its own conversation context.
-            # Top-level group messages keep the default group-wide session.
-            # Private chat: no override — same behavior as Telegram/Slack.
-            if chat_type == "group" and root_id and root_id != message_id:
-                session_key = f"feishu:{chat_id}:{root_id}"
-            else:
-                session_key = None
+            # Keep Feishu sessions scoped to the chat. Topic/reply metadata is
+            # still preserved below for delivery threading, but it must not
+            # split one group into many session files.
+            session_key = None
 
             # Forward to message bus
             reply_to = chat_id if chat_type == "group" else sender_id

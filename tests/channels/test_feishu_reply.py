@@ -503,8 +503,8 @@ async def test_download_and_save_media_returns_absolute_path_in_content(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_session_key_group_with_root_id_is_thread_scoped() -> None:
-    """Group message with root_id gets a thread-scoped session key."""
+async def test_session_key_group_with_root_id_uses_default() -> None:
+    """Group message with root_id still uses the default group-wide session key."""
     channel = _make_feishu_channel(group_policy="open")
     bus_spy = []
     original_publish = channel.bus.publish_inbound
@@ -527,7 +527,8 @@ async def test_session_key_group_with_root_id_is_thread_scoped() -> None:
     await channel._on_message(event)
 
     assert len(bus_spy) == 1
-    assert bus_spy[0].session_key == "feishu:oc_abc:om_root123"
+    assert bus_spy[0].session_key_override is None
+    assert bus_spy[0].session_key == "feishu:oc_abc"
 
 
 @pytest.mark.asyncio
