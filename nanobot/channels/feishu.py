@@ -1124,6 +1124,10 @@ class FeishuChannel(BaseChannel):
 
     _REPLY_CONTEXT_MAX_LEN = 200
     _USER_NAME_FAILURE_TTL = 60.0
+    _UNSUPPORTED_CLIENT_TEXT = "请升级至最新版本客户端，以查看内容"
+    _MEDIA_REPLY_PLACEHOLDERS = frozenset(
+        {*MSG_TYPE_MAP.values(), "[media]", "[video]"}
+    )
 
     @staticmethod
     def _extract_message_text(msg_type: str, content_json: Any) -> str:
@@ -1160,6 +1164,24 @@ class FeishuChannel(BaseChannel):
 
         return f"[{msg_type}]" if msg_type else ""
 
+    @classmethod
+    def _clean_reply_context_text(cls, text: str) -> str:
+        """Return useful quoted-message text, dropping Feishu fallback placeholders."""
+        if not text:
+            return ""
+
+        lines: list[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if cls._UNSUPPORTED_CLIENT_TEXT in stripped:
+                continue
+            if stripped in cls._MEDIA_REPLY_PLACEHOLDERS:
+                continue
+            lines.append(stripped)
+        return "\n".join(lines).strip()
+
     def _get_message_content_sync(self, message_id: str) -> str | None:
         """Fetch the text content of a Feishu message by ID (synchronous).
 
@@ -1191,6 +1213,7 @@ class FeishuChannel(BaseChannel):
             mentions = getattr(msg_obj, "mentions", None) or None
             if mentions:
                 text = self._resolve_parent_mentions(text, mentions)
+            text = self._clean_reply_context_text(text)
             if not text:
                 return None
             if len(text) > self._REPLY_CONTEXT_MAX_LEN:

@@ -149,6 +149,28 @@ def test_get_message_content_sync_returns_none_for_non_text_type() -> None:
     assert result is None
 
 
+def test_get_message_content_sync_filters_unsupported_client_placeholder() -> None:
+    channel = _make_feishu_channel()
+    channel._client.im.v1.message.get.return_value = _make_get_message_response(
+        "[image]\n请升级至最新版本客户端，以查看内容\nreal question"
+    )
+
+    result = channel._get_message_content_sync("om_parent")
+
+    assert result == "[Reply to: real question]"
+
+
+def test_get_message_content_sync_returns_none_for_only_unsupported_placeholder() -> None:
+    channel = _make_feishu_channel()
+    channel._client.im.v1.message.get.return_value = _make_get_message_response(
+        "[image]\n请升级至最新版本客户端，以查看内容"
+    )
+
+    result = channel._get_message_content_sync("om_parent")
+
+    assert result is None
+
+
 def test_get_message_content_sync_returns_none_when_empty_text() -> None:
     channel = _make_feishu_channel()
     channel._client.im.v1.message.get.return_value = _make_get_message_response("   ")
