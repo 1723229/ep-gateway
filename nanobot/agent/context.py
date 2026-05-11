@@ -16,7 +16,12 @@ from loguru import logger
 
 from nanobot.agent.memory import MemoryStore
 from nanobot.agent.skills import SkillsLoader
-from nanobot.utils.helpers import build_assistant_message, current_time_str, detect_image_mime, truncate_text
+from nanobot.utils.helpers import (
+    build_assistant_message,
+    current_time_str,
+    detect_image_mime,
+    truncate_text,
+)
 from nanobot.utils.prompt_templates import render_template
 
 if TYPE_CHECKING:
@@ -75,6 +80,7 @@ class ContextBuilder:
         self,
         skill_names: list[str] | None = None,
         channel: str | None = None,
+        session_summary: str | None = None,
     ) -> str:
         """Build the system prompt from identity, bootstrap files, memory, and skills."""
         parts = [self._get_identity(channel=channel)]
@@ -111,6 +117,9 @@ class ContextBuilder:
             )
             history_text = truncate_text(history_text, self._MAX_HISTORY_CHARS)
             parts.append("# Recent History\n\n" + history_text)
+
+        if session_summary:
+            parts.append(f"[Archived Context Summary]\n\n{session_summary}")
 
         return "\n\n---\n\n".join(parts)
 
@@ -212,7 +221,11 @@ class ContextBuilder:
             merged = f"{runtime_ctx}\n\n{user_content}"
         else:
             merged = [{"type": "text", "text": runtime_ctx}] + user_content
-        system_prompt = await self.build_system_prompt(skill_names, channel=channel)
+        system_prompt = await self.build_system_prompt(
+            skill_names,
+            channel=channel,
+            session_summary=session_summary,
+        )
 
         if self._viking_client and current_message:
             try:

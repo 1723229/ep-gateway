@@ -160,9 +160,9 @@ def create_app(
 
 def _make_provider(config: Config):
     """Create the provider using the same logic as gateway/CLI."""
-    from nanobot.nanobot import _make_provider as make_gateway_provider
+    from nanobot.providers.factory import make_provider
 
-    return make_gateway_provider(config)
+    return make_provider(config)
 
 
 # ============================================================================
