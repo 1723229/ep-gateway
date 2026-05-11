@@ -46,14 +46,14 @@ nanobot --version
 **Using WhatsApp?** Rebuild the local bridge after upgrading:
 
 ```bash
-rm -rf ~/.nanobot/bridge
+rm -rf ~/.hiperone/bridge
 nanobot channels login whatsapp
 ```
 
 ## Quick Start
 
 > [!TIP]
-> Set your API key in `~/.nanobot/config.json`.
+> Set your API key in `~/.hiperone/config.json`.
 > Get API keys: [OpenRouter](https://openrouter.ai/keys) (Global)
 >
 > For other LLM providers, please see [`configuration.md`](./configuration.md).
@@ -68,7 +68,7 @@ nanobot onboard
 
 Use `nanobot onboard --wizard` if you want the interactive setup wizard.
 
-**2. Configure** (`~/.nanobot/config.json`)
+**2. Configure** (`~/.hiperone/config.json`)
 
 Configure these **two parts** in your config (other options have defaults).
 
