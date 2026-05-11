@@ -1780,8 +1780,8 @@ class FeishuChannel(BaseChannel):
             chat_type = message.chat_type
             msg_type = message.message_type
 
-            # if not self.is_allowed(sender_id):
-            #     return
+            if not self.is_allowed(sender_id):
+                return
 
             loop = asyncio.get_running_loop()
 
