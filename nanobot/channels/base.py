@@ -128,7 +128,7 @@ class BaseChannel(ABC):
         return bool(streaming) and type(self).send_delta is not BaseChannel.send_delta
 
     def is_allowed(self, sender_id: str) -> bool:
-        """Check if *sender_id* is permitted.  Empty list → deny all; ``"*"`` → allow all."""
+        """Check if *sender_id* is permitted. Empty list or ``"*"`` allows all."""
         if isinstance(self.config, dict):
             if "allow_from" in self.config:
                 allow_list = self.config.get("allow_from")
@@ -137,8 +137,7 @@ class BaseChannel(ABC):
         else:
             allow_list = getattr(self.config, "allow_from", [])
         if not allow_list:
-            self.logger.warning("allow_from is empty — all access denied")
-            return False
+            return True
         if "*" in allow_list:
             return True
         return str(sender_id) in allow_list
@@ -166,10 +165,10 @@ class BaseChannel(ABC):
             session_key: Optional session key override (e.g. thread-scoped sessions).
         """
         if not self.is_allowed(sender_id):
-            self.logger.warning(
-                "Access denied for sender {}. "
-                "Add them to allowFrom list in config to grant access.",
-                sender_id,
+            logger.warning(
+               "Access denied for sender {}. "
+               "Add them to allowFrom list in config to grant access.",
+               sender_id,
             )
             return
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
 import re
@@ -10,7 +11,7 @@ import weakref
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterator
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator
 
 import tiktoken
 from loguru import logger
@@ -30,6 +31,7 @@ from nanobot.utils.helpers import (
 from nanobot.utils.prompt_templates import render_template
 
 if TYPE_CHECKING:
+    from nanobot.openviking.client import VikingClient
     from nanobot.providers.base import LLMProvider
     from nanobot.session.manager import SessionManager
 
@@ -229,6 +231,26 @@ class MemoryStore:
     def get_memory_context(self) -> str:
         long_term = self.read_memory()
         return f"## Long-term Memory\n{long_term}" if long_term else ""
+
+    async def get_viking_memory_context(
+        self,
+        current_message: str,
+        viking_client: VikingClient,
+    ) -> str:
+        """Fetch relevant memories from OpenViking for the current message."""
+        try:
+            return await viking_client.get_viking_memory_context(current_message)
+        except Exception as e:
+            logger.warning("OpenViking memory context failed: {}", e)
+            return ""
+
+    async def get_viking_user_profile(self, viking_client: VikingClient) -> str:
+        """Fetch user profile from OpenViking."""
+        try:
+            return await viking_client.get_viking_user_profile()
+        except Exception as e:
+            logger.warning("OpenViking user profile failed: {}", e)
+            return ""
 
     # -- history.jsonl — append-only, JSONL format ---------------------------
 
@@ -455,7 +477,7 @@ class Consolidator:
         model: str,
         sessions: SessionManager,
         context_window_tokens: int,
-        build_messages: Callable[..., list[dict[str, Any]]],
+        build_messages: Callable[..., Awaitable[list[dict[str, Any]]]],
         get_tool_definitions: Callable[[], list[dict[str, Any]]],
         max_completion_tokens: int = 4096,
         consolidation_ratio: float = 0.5,
@@ -587,7 +609,7 @@ class Consolidator:
             }
             self.sessions.save(session)
 
-    def estimate_session_prompt_tokens(
+    async def estimate_session_prompt_tokens(
         self,
         session: Session,
     ) -> tuple[int, str]:
@@ -605,6 +627,8 @@ class Consolidator:
             sender_id=None,
             session_summary=summary,
         )
+        if inspect.isawaitable(probe_messages):
+            probe_messages = await probe_messages
         return estimate_prompt_tokens_chain(
             self.provider,
             self.model,
@@ -689,9 +713,10 @@ class Consolidator:
                 replay_max_messages,
             )
             try:
-                estimated, source = self.estimate_session_prompt_tokens(
-                    session,
-                )
+                estimate = self.estimate_session_prompt_tokens(session)
+                if inspect.isawaitable(estimate):
+                    estimate = await estimate
+                estimated, source = estimate
             except Exception:
                 logger.exception("Token estimation failed for {}", session.key)
                 estimated, source = 0, "error"
@@ -754,9 +779,10 @@ class Consolidator:
                     break
 
                 try:
-                    estimated, source = self.estimate_session_prompt_tokens(
-                        session,
-                    )
+                    estimate = self.estimate_session_prompt_tokens(session)
+                    if inspect.isawaitable(estimate):
+                        estimate = await estimate
+                    estimated, source = estimate
                 except Exception:
                     logger.exception("Token estimation failed for {}", session.key)
                     estimated, source = 0, "error"
@@ -830,13 +856,13 @@ class Dream:
 
     def _build_tools(self) -> ToolRegistry:
         """Build a minimal tool registry for the Dream agent."""
+        from nanobot.agent.skill_evo.integration import build_dream_skill_tools
         from nanobot.agent.skills import BUILTIN_SKILLS_DIR
         from nanobot.agent.tools.file_state import FileStates
-        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool, WriteFileTool
+        from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool
 
         tools = ToolRegistry()
         workspace = self.store.workspace
-        # Allow reading builtin skills for reference during skill creation
         extra_read = [BUILTIN_SKILLS_DIR] if BUILTIN_SKILLS_DIR.exists() else None
         # Dream gets its own FileStates so its caches stay isolated from the
         # main loop's sessions (issue #3571).
@@ -848,11 +874,12 @@ class Dream:
             file_states=file_states,
         ))
         tools.register(EditFileTool(workspace=workspace, allowed_dir=workspace, file_states=file_states))
-        # write_file resolves relative paths from workspace root, but can only
-        # write under skills/ so the prompt can safely use skills/<name>/SKILL.md.
-        skills_dir = workspace / "skills"
-        skills_dir.mkdir(parents=True, exist_ok=True)
-        tools.register(WriteFileTool(workspace=workspace, allowed_dir=skills_dir, file_states=file_states))
+
+        skill_tools = build_dream_skill_tools(workspace)
+        for name in skill_tools.tool_names:
+            tool = skill_tools.get(name)
+            if tool is not None:
+                tools.register(tool)
         return tools
 
     # -- skill listing --------------------------------------------------------
