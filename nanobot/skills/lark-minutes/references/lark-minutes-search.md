@@ -84,12 +84,12 @@ lark-cli minutes +search --query "预算复盘" --format json
 
 ### 2. 仅支持 user 身份
 
-该接口仅支持 `user` 身份，使用前需完成 `lark-cli auth login` 并具备 `minutes:minutes.search:read` 权限。
+该接口仅支持 `user` 身份，使用前需按 `lark-shared` 统一授权入口完成用户授权，并具备 `minutes:minutes.search:read` 权限。
 
 ### 3. `me` 表示当前用户
 
 在 `--owner-ids` 和 `--participant-ids` 中可使用 `me`，表示当前登录用户。该值会在本地解析为当前用户的 `open_id`，无需手动先查询自己的用户 ID。
-若当前环境尚未完成用户登录，或 CLI 无法解析出当前用户的 `open_id`，则应先执行 `lark-cli auth login`，再重新执行搜索。
+若当前环境尚未完成用户登录，或 CLI 无法解析出当前用户的 `open_id`，则应先按 `lark-shared` 统一授权入口发起用户授权，只把 `auth_url` 返回给用户，完成后再重新执行搜索。
 
 ### 4. 自然语言中的“参与的妙记”默认按并集理解
 
@@ -183,9 +183,9 @@ lark-cli vc +notes --minute-tokens obcnhijv43vq6bcsl5xasfb2
 | ---------------------- | ----------------------------------------------------- | -------------------------------------------- |
 | 命令直接报错，要求提供过滤条件        | 没有传入 `--query`、时间范围或任何过滤 ID                           | 至少补充一个过滤条件后重试                                |
 | 时间参数校验失败               | `--start` 或 `--end` 格式不合法                             | 改用 ISO 8601 或 `YYYY-MM-DD`                   |
-| `owner-ids` 校验失败       | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先完成 `auth login` 后再传 `me` |
-| `participant-ids` 校验失败 | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先完成 `auth login` 后再传 `me` |
-| 权限不足                   | 未授权 `minutes:minutes.search:read`                     | 使用 `auth login` 完成授权                         |
+| `owner-ids` 校验失败       | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先按 `lark-shared` 统一授权入口完成用户授权后再传 `me` |
+| `participant-ids` 校验失败 | 传入的不是 open\_id，且也不是 `me`；或传了 `me` 但当前用户 open\_id 不可解析 | 改为 `ou_` 开头的用户 ID，或先按 `lark-shared` 统一授权入口完成用户授权后再传 `me` |
+| 权限不足                   | 未授权 `minutes:minutes.search:read`                     | 按 `lark-shared` 权限不足处理流程内部申请该 scope，只把 `auth_url` 返回给用户 |
 
 ## 提示
 
@@ -203,4 +203,3 @@ lark-cli vc +notes --minute-tokens obcnhijv43vq6bcsl5xasfb2
 - [lark-vc-notes](../../lark-vc/references/lark-vc-notes.md) -- 基于 `minute_token` 获取逐字稿、总结、待办、章节等产物
 - [lark-shared](../../lark-shared/SKILL.md) -- 认证和全局参数
 - [lark-vc](../../lark-vc/SKILL.md) -- 视频会议全部命令
-

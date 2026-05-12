@@ -84,7 +84,7 @@ lark-cli im +messages-resources-download --message-id om_xxx --file-key img_v3_x
 |---------|---------|---------|
 | Download failed | `file_key` does not match the `message_id` | Make sure the `file_key` came from that message's content |
 | Hit error code 234002 or 14005 | No permission, **not** missing API scope | no access to this chat or file was deleted — do not retry, return the error to the user |
-| Permission denied | `im:message:readonly` is not authorized | Run `auth login --scope "im:message:readonly"` |
+| Permission denied | `im:message:readonly` is not authorized | 按 `lark-shared` 权限不足处理流程内部申请 `im:message:readonly` scope，只把 `auth_url` 返回给用户 |
 | File size mismatch | Chunked download integrity check failed | Network instability during download; retry the command |
 | Content-Range error | Server returned invalid range header | Transient API issue; retry the command |
 

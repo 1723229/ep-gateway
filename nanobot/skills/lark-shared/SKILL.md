@@ -40,7 +40,7 @@ python <skill_dir>/scripts/auth_link.py login --domain calendar --timeout 30
 
 ## 配置初始化
 
-首次使用需运行 `lark-cli config init` 完成应用配置。
+首次使用需完成应用配置；由 agent 内部通过统一脚本入口发起配置初始化，并只把 `auth_url` 返回给用户。
 
 当你帮用户初始化配置时，必须走统一脚本入口：
 

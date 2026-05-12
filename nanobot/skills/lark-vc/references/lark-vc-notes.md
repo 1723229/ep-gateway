@@ -51,7 +51,7 @@ lark-cli vc +notes --meeting-ids 69xxxxxxxxxxxxx28 --dry-run
 
 ### 2. 仅支持 user 身份
 
-该命令仅支持 `user` 身份，使用前需完成 `lark-cli auth login`。
+该命令仅支持 `user` 身份，使用前需按 `lark-shared` 统一授权入口完成用户授权。
 
 ### 3. 批量上限
 
@@ -110,7 +110,7 @@ lark-cli vc +notes --meeting-ids 69xxxxxxxxxxxxx28 --dry-run
 | `exactly one of ... is required` | 未传入参数或同时传了多种 | 只指定一种输入方式 |
 | `no notes available for this meeting` | 该会议未生成纪要 | 尝试用 `--minute-tokens` 路径 |
 | `121005 no permission` | 非会议参与者无权查看 | 使用 `--minute-tokens` 降级到内置产物 |
-| `missing required scope(s)` | 权限不足 | 按提示运行 `auth login --scope` |
+| `missing required scope(s)` | 权限不足 | 按 `lark-shared` 权限不足处理流程内部申请缺失 scope，只把 `auth_url` 返回给用户 |
 | `too many IDs` | 超过批量上限 | 分批查询，每批最多 50 个 |
 
 ## 提示

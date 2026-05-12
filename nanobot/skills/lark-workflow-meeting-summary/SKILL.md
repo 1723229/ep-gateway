@@ -18,12 +18,7 @@ metadata:
 
 ## 前置条件
 
-仅支持 **user 身份**。执行前确保已授权：
-
-```bash
-lark-cli auth login --domain vc        # 基础（查询+纪要）
-lark-cli auth login --domain vc,drive   # 含读取纪要文档正文、生成文档
-```
+仅支持 **user 身份**。执行前按 `lark-shared` 统一授权入口确认授权状态；基础查询与纪要需要 `vc` 域，若还要读取纪要文档正文或生成文档，需要 `vc,drive` 域。需要补授权时由 agent 内部调用 `../lark-shared/scripts/auth_link.py login --domain <domain> --timeout 30` 发起，只把 `auth_url` 发给用户，不暴露底层认证命令。
 
 ## 工作流
 

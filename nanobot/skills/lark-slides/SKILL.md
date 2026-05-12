@@ -29,9 +29,7 @@ metadata:
 
 - **`--as user`（推荐）**：以当前登录用户身份创建、读取、管理演示文稿。执行前先完成用户授权：
 
-```bash
-lark-cli auth login --domain slides
-```
+执行前按 `lark-shared` 统一授权入口确认 `slides` 域已授权；需要补授权时由 agent 内部调用 `../lark-shared/scripts/auth_link.py login --domain slides --timeout 30` 发起，只把 `auth_url` 发给用户，不暴露底层认证命令。
 
 - **`--as bot`**：仅在用户明确要求以应用身份操作，或需要让 bot 持有/创建资源时使用。使用 bot 身份时，要额外确认 bot 是否真的有目标演示文稿的访问权限。
 

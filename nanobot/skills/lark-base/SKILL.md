@@ -258,11 +258,7 @@ metadata:
 
 多维表格通常属于用户的个人或团队资源。**默认应优先使用 `--as user`（用户身份）执行所有 Base 操作**，始终显式指定身份。
 
-- **`--as user`（推荐）**：以当前登录用户身份操作其有权访问的 Base。执行前先完成用户授权：
-
-```bash
-lark-cli auth login --domain base
-```
+- **`--as user`（推荐）**：以当前登录用户身份操作其有权访问的 Base。执行前按 `lark-shared` 统一授权入口确认 `base` 域用户授权；需要补授权时由 agent 内部调用 `../lark-shared/scripts/auth_link.py login --domain base --timeout 30` 发起，只把 `auth_url` 发给用户。
 
 - **`--as bot`（降级）**：仅当 user 身份权限不足、且 bot 身份确实拥有目标 Base 的访问权限时，才降级使用。bot 看不到用户私有资源，行为以应用身份执行。
 
@@ -271,7 +267,7 @@ lark-cli auth login --domain base
 1. 所有操作默认先用 `--as user`。
 2. 若 user 身份返回权限错误，先判断是否为**不可重试错误码**（如 `91403`）。若是，**立即停止**，不做任何重试或降级，直接按 `lark-shared` 权限不足处理流程引导用户解决。
 3. 非不可重试错误码时，检查错误响应中是否包含 `permission_violations` / `hint` 等提权引导信息：
-   - **有提权引导**：按 `lark-shared` 权限不足处理流程，先引导用户完成 user 身份提权（`auth login --scope`）；确认提权成功后，以 `--as user` 重试。
+   - **有提权引导**：按 `lark-shared` 权限不足处理流程，先通过统一授权入口内部发起 user 身份 scope 提权；确认提权成功后，以 `--as user` 重试。
    - **无提权引导**（如资源级无访问权限、非 scope 不足）：切换到 `--as bot` 重试**一次**。
 4. 若 bot 身份仍然返回权限错误，**立即停止重试**，根据错误响应按 `lark-shared` 流程引导用户解决（引导去开发者后台开通 scope 或确认资源访问权限）。
 5. 只有在用户明确要求"用应用身份 / bot 身份操作"，才跳过 user 直接使用 `--as bot`。

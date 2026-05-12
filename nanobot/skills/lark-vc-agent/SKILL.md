@@ -46,7 +46,7 @@ metadata:
 2. `+meeting-join --meeting-number` 只接受 **9 位纯数字**会议号，不是会议链接整串、也不是 `meeting_id`。
 3. 返回体中的 `meeting.id` **必须立刻记录**——后续 `+meeting-events` / `+meeting-leave` 都靠它，**不能用 9 位会议号替代**。
 4. 入会对所有参会人可见，执行前核实 9 位会议号来源，避免误入错会。
-5. 仅支持 `user` 身份，需提前 `lark-cli auth login`。
+5. 仅支持 `user` 身份，需提前按 `lark-shared` 统一授权入口完成用户授权；需要补授权时只把内部脚本返回的 `auth_url` 发给用户。
 6. 若入会失败，优先查看 `+meeting-join` reference 的错误排查段落，重点确认会议号、密码、会议状态、等候室 / 审批以及会议是否禁止当前身份加入。
 
 ### 2. 感知会中事件（读操作）

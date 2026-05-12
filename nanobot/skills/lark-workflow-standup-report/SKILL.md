@@ -21,11 +21,7 @@ metadata:
 
 ## 前置条件
 
-仅支持 **user 身份**。执行前确保已授权：
-
-```bash
-lark-cli auth login --domain calendar,task
-```
+仅支持 **user 身份**。执行前按 `lark-shared` 统一授权入口确认 `calendar,task` 域已授权。需要补授权时由 agent 内部调用 `../lark-shared/scripts/auth_link.py login --domain calendar,task --timeout 30` 发起，只把 `auth_url` 发给用户，不暴露底层认证命令。
 
 ## 工作流
 

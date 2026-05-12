@@ -54,7 +54,7 @@ lark-cli docs +create --api-version v2 --doc-format markdown --content $'# 项�
 >
 > 以应用身份创建时，结果里会额外返回 `permission_grant` 字段，明确说明授权结果：
 > - `status = granted`：当前 CLI 用户已获得该文档的可管理权限
-> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；可提示用户先完成 `lark-cli auth login`，再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
+> - `status = skipped`：本地没有可用的当前用户 `open_id`，因此不会自动授权；按 `lark-shared` 统一授权入口发起用户授权，只把 `auth_url` 返回给用户，完成后再让 AI / agent 继续使用应用身份（bot）授予当前用户权限
 > - `status = failed`：文档已创建成功，但自动授权用户失败；会带上失败原因，并提示稍后重试或继续使用 bot 身份处理该文档
 >
 > `permission_grant.perm = full_access` 表示该资源已授予”可管理权限”。
@@ -86,4 +86,3 @@ lark-cli docs +create --api-version v2 --doc-format markdown --content $'# 项�
 - [`lark-doc-update.md`](lark-doc-update.md) — 更新文档
 - [`lark-doc-media-insert.md`](lark-doc-media-insert.md) — 插入图片/文件到文档
 - [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md) — 认证和全局参数
-

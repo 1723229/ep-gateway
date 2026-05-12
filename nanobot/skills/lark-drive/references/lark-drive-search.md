@@ -84,7 +84,7 @@ lark-cli drive +search --query 方案 --page-token '<PAGE_TOKEN>'
 
 | 参数 | 映射 | 说明 |
 |---|---|---|
-| `--mine` | `creator_ids = [当前用户 open_id]` | bool。一键"我创建的"；从当前登录用户身份（`runtime.UserOpenId()`）解析 open_id，取不到直接报错（提示运行 `lark-cli auth login`） |
+| `--mine` | `creator_ids = [当前用户 open_id]` | bool。一键"我创建的"；从当前登录用户身份（`runtime.UserOpenId()`）解析 open_id，取不到直接报错（按 `lark-shared` 统一授权入口发起用户授权） |
 | `--creator-ids ou_x,ou_y` | `creator_ids = [...]` | 显式 open_id 列表，逗号分隔；**与 `--mine` 互斥** |
 
 ### 时间维度（每个维度一对 since/until）
