@@ -21,10 +21,10 @@ metadata:
 
 ## 前置条件
 
-仅支持 **user 身份**。如用户授权缺失或过期，按 [`../lark-shared/SKILL.md`](../lark-shared/SKILL.md) 的共享认证规则在后台发起下列授权，并把授权链接发给用户点击；不要让最终用户执行这些命令。
+仅支持 **user 身份**。执行前确保已授权：
 
 ```bash
-python <skill_dir>/scripts/auth_link.py login --domain calendar,task --timeout 30
+lark-cli auth login --domain calendar,task
 ```
 
 ## 工作流

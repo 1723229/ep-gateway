@@ -35,6 +35,9 @@ lark-cli im +messages-search --query "reminder" --exclude-sender-type bot
 # Only messages that @me
 lark-cli im +messages-search --query "announcement" --is-at-me
 
+# Only messages that @mention specific users (results also include messages that @all)
+lark-cli im +messages-search --query "release" --at-chatter-ids ou_xxx,ou_yyy
+
 # Combined filters + time range
 lark-cli im +messages-search --query "meeting" --sender ou_xxx --chat-type group --start "2026-03-13T00:00:00+08:00" --end "2026-03-20T23:59:59+08:00"
 
@@ -71,6 +74,7 @@ lark-cli im +messages-search --query "test" --dry-run
 | `--sender-type <type>` | No | Sender type: `user` / `bot` |
 | `--exclude-sender-type <type>` | No | Exclude messages from `user` or `bot` senders |
 | `--is-at-me` | No | Only return messages that mention `@me` |
+| `--at-chatter-ids <ids>` | No | Filter by @mentioned user open_ids, comma-separated (`ou_xxx,ou_yyy`). Matched results also include messages that `@all` |
 | `--start <time>` | No | Start time with local timezone offset required (e.g. `2026-03-24T00:00:00+08:00`) |
 | `--end <time>` | No | End time with local timezone offset required (e.g. `2026-03-25T23:59:59+08:00`) |
 | `--page-size <n>` | No | Page size (default 20, range 1-50) |
@@ -204,7 +208,7 @@ lark-cli im +messages-search --query "" --chat-id oc_xxx --sender ou_me --start 
 |---------|---------|---------|
 | Too few results | The time range is too narrow or the keyword is too specific | Expand the time range and try broader keywords |
 | No results | Missing permission or no match | Confirm `search:message` is authorized and relax the filters |
-| Permission denied | Search scope not authorized | Follow the shared auth rule in [`../../lark-shared/SKILL.md`](../../lark-shared/SKILL.md): run `python <skill_dir>/scripts/auth_link.py login --scope "search:message" --timeout 30` internally, extract `auth_url`, and return only that link to the user |
+| Permission denied | Search scope not authorized | Run `auth login --scope "search:message"` |
 
 ## References
 

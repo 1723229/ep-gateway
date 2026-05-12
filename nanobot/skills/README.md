@@ -42,7 +42,6 @@ The list below reflects the skill directories currently present under `nanobot/s
 | Skill | Description |
 |-------|-------------|
 | `dingtalk-skills` | DingTalk capability hub covering tables, calendar, contacts, group chat, bots, tasks, approval, attendance, logs, and related workflows. |
-| `feishu-bitable` | Feishu Bitable operations, including record CRUD and table-oriented workflows. |
 
 ### Lark / Feishu Skills
 
@@ -52,6 +51,7 @@ The list below reflects the skill directories currently present under `nanobot/s
 | `lark-openapi-explorer` | Explore native Lark OpenAPI endpoints not yet wrapped by existing CLI commands. |
 | `lark-skill-maker` | Create reusable skills built around Lark CLI capabilities. |
 | `lark-approval` | Approval instance and approval task operations. |
+| `lark-attendance` | Attendance groups, shifts, records, approvals, and statistics. |
 | `lark-base` | Lark Base schema, field, record, view, and related data operations. |
 | `lark-calendar` | Calendar, events, participants, free/busy lookup, and meeting room workflows. |
 | `lark-contact` | Directory, org structure, and employee lookup. |
@@ -60,12 +60,15 @@ The list below reflects the skill directories currently present under `nanobot/s
 | `lark-event` | Real-time Lark event subscription and event stream handling. |
 | `lark-im` | Messaging, chat history, group management, and media/file handling. |
 | `lark-mail` | Draft, send, reply to, search, and manage email. |
+| `lark-markdown` | Convert Markdown into Lark-compatible document structures and workflows. |
 | `lark-minutes` | Retrieve meeting minutes metadata and related AI-generated artifacts. |
+| `lark-okr` | Query and manage Lark OKR periods, objectives, key results, and progress. |
 | `lark-sheets` | Spreadsheet creation, read/write, append, search, and export workflows. |
+| `lark-slides` | Create, inspect, and manage Lark Slides. |
 | `lark-task` | Task and checklist management. |
 | `lark-vc` | Video conference records and meeting artifact retrieval. |
+| `lark-vc-agent` | Agent workflow guidance for video conference and meeting summary tasks. |
 | `lark-whiteboard` | Inspect and edit Lark whiteboards, including visual exports and structured updates. |
-| `lark-whiteboard-cli` | Use `whiteboard-cli` to design and generate Lark whiteboard diagrams. |
 | `lark-wiki` | Knowledge space and wiki node management. |
 | `lark-workflow-meeting-summary` | Summarize meetings over a time range into a structured report. |
 | `lark-workflow-standup-report` | Generate standup-style summaries from calendar and task data. |

@@ -18,11 +18,11 @@ metadata:
 
 ## 前置条件
 
-仅支持 **user 身份**。如用户授权缺失或过期，按 [`../lark-shared/SKILL.md`](../lark-shared/SKILL.md) 的共享认证规则在后台发起下列授权，并把授权链接发给用户点击；不要让最终用户执行这些命令。
+仅支持 **user 身份**。执行前确保已授权：
 
 ```bash
-python <skill_dir>/scripts/auth_link.py login --domain vc --timeout 30         # 基础（查询+纪要）
-python <skill_dir>/scripts/auth_link.py login --domain vc,drive --timeout 30   # 含读取纪要文档正文、生成文档
+lark-cli auth login --domain vc        # 基础（查询+纪要）
+lark-cli auth login --domain vc,drive   # 含读取纪要文档正文、生成文档
 ```
 
 ## 工作流
@@ -92,9 +92,9 @@ lark-cli drive metas batch_query --data '{"request_docs": [{"doc_type": "docx", 
 阅读 [`../lark-doc/SKILL.md`](../lark-doc/SKILL.md) 学习云文档技能。
 
 ```bash
-lark-cli docs +create --title "会议纪要汇总 (<start> - <end>)" --markdown "<内容>"
+lark-cli docs +create --api-version v2 --doc-format markdown --content $'<title>会议纪要汇总 (<start> - <end>)</title>\n<内容>'
 # 或追加到已有文档
-lark-cli docs +update --doc "<url_or_token>" --mode append --markdown "<内容>"
+lark-cli docs +update --api-version v2 --doc "<url_or_token>" --command append --doc-format markdown --content $'<内容>'
 ```
 
 ## 参考

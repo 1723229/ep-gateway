@@ -92,6 +92,28 @@ async def test_skills_list_includes_supporting_files(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_skills_list_includes_lark_whiteboard_route_and_scene_files(tmp_path: Path) -> None:
+    loader, ws_skills, _ = _make_loader(tmp_path)
+    _write_skill(ws_skills, "lark-whiteboard", description="whiteboard")
+    skill_dir = ws_skills / "lark-whiteboard"
+    routes_dir = skill_dir / "routes"
+    scenes_dir = skill_dir / "scenes"
+    routes_dir.mkdir()
+    scenes_dir.mkdir()
+    (routes_dir / "dsl.md").write_text("# DSL", encoding="utf-8")
+    (scenes_dir / "flowchart.md").write_text("# Flowchart", encoding="utf-8")
+
+    tool = SkillsListTool(catalog=loader)
+    raw = await tool.execute()
+    data = json.loads(raw)
+    skill = data["skills"][0]
+    assert skill["supporting_files"] == {
+        "routes": ["routes/dsl.md"],
+        "scenes": ["scenes/flowchart.md"],
+    }
+
+
+@pytest.mark.asyncio
 async def test_skills_list_empty(tmp_path: Path) -> None:
     loader, _, _ = _make_loader(tmp_path)
     tool = SkillsListTool(catalog=loader)
@@ -135,6 +157,30 @@ async def test_skill_view_reads_supporting_file(tmp_path: Path) -> None:
     data = json.loads(raw)
     assert data["success"]
     assert data["content"] == "# Spec content"
+
+
+@pytest.mark.asyncio
+async def test_skill_view_reads_route_and_scene_files(tmp_path: Path) -> None:
+    loader, ws_skills, _ = _make_loader(tmp_path)
+    _write_skill(ws_skills, "lark-whiteboard")
+    skill_dir = ws_skills / "lark-whiteboard"
+    routes_dir = skill_dir / "routes"
+    scenes_dir = skill_dir / "scenes"
+    routes_dir.mkdir()
+    scenes_dir.mkdir()
+    (routes_dir / "svg.md").write_text("# SVG route", encoding="utf-8")
+    (scenes_dir / "swimlane.md").write_text("# Swimlane scene", encoding="utf-8")
+
+    tool = SkillViewTool(catalog=loader)
+    route_raw = await tool.execute(name="lark-whiteboard", file_path="routes/svg.md")
+    scene_raw = await tool.execute(name="lark-whiteboard", file_path="scenes/swimlane.md")
+
+    route_data = json.loads(route_raw)
+    scene_data = json.loads(scene_raw)
+    assert route_data["success"]
+    assert route_data["content"] == "# SVG route"
+    assert scene_data["success"]
+    assert scene_data["content"] == "# Swimlane scene"
 
 
 @pytest.mark.asyncio

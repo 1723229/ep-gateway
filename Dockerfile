@@ -55,7 +55,7 @@ RUN apt-get update && \
         unzip \
         libatspi2.0-0 && \
     rm -rf /var/lib/apt/lists/* && \
-    npm install -g @larksuite/cli@v1.0.19 && \
+    npm install -g @larksuite/cli@v1.0.28 && \
     npm install -g dingtalk-workspace-cli@1.0.16 && \
     npm install -g agent-browser && \
     agent-browser install --with-deps
