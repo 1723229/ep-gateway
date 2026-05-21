@@ -72,7 +72,7 @@ def test_onboard_fresh_install(mock_paths):
     assert result.exit_code == 0
     assert "Created config" in result.stdout
     assert "Created workspace" in result.stdout
-    assert "nanobot is ready" in result.stdout
+    assert "HiperOne is ready" in result.stdout
     assert config_file.exists()
     assert (workspace_dir / "AGENTS.md").exists()
     assert (workspace_dir / "memory" / "MEMORY.md").exists()
@@ -138,6 +138,25 @@ def test_onboard_help_shows_workspace_and_config_options():
     assert "-c" in stripped_output
     assert "--wizard" in stripped_output
     assert "--dir" not in stripped_output
+
+
+def test_root_help_lists_web_and_admin_commands():
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    stripped_output = _strip_ansi(result.stdout)
+    assert "gateway" in stripped_output
+    assert "nanobot gateway" in stripped_output
+    assert "admin" in stripped_output
+    assert "admin HTTP interface" in stripped_output
+
+
+def test_admin_help_shows_admin_command_text():
+    result = runner.invoke(app, ["admin", "--help"])
+
+    assert result.exit_code == 0
+    stripped_output = _strip_ansi(result.stdout)
+    assert "Start the admin HTTP interface with full gateway stack." in stripped_output
 
 
 def test_onboard_interactive_discard_does_not_save_or_create_workspace(mock_paths, monkeypatch):

@@ -1,5 +1,6 @@
 """Tests for ContextBuilder — system prompt and message assembly."""
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -228,36 +229,36 @@ class TestBuildUserContent:
 class TestBuildSystemPrompt:
     def test_returns_nonempty_string(self, tmp_path):
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt()
+        result = asyncio.run(builder.build_system_prompt())
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_includes_identity_section(self, tmp_path):
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt()
+        result = asyncio.run(builder.build_system_prompt())
         assert "workspace" in result.lower() or "python" in result.lower()
 
     def test_includes_bootstrap_files(self, tmp_path):
         (tmp_path / "AGENTS.md").write_text("Be helpful and concise.", encoding="utf-8")
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt()
+        result = asyncio.run(builder.build_system_prompt())
         assert "Be helpful and concise." in result
 
     def test_includes_session_summary(self, tmp_path):
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt(session_summary="Previous chat about Python.")
+        result = asyncio.run(builder.build_system_prompt(session_summary="Previous chat about Python."))
         assert "Previous chat about Python." in result
         assert "[Archived Context Summary]" in result
 
     def test_sections_separated_by_separator(self, tmp_path):
         (tmp_path / "AGENTS.md").write_text("Rules.", encoding="utf-8")
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt(session_summary="Summary.")
+        result = asyncio.run(builder.build_system_prompt(session_summary="Summary."))
         assert "\n\n---\n\n" in result
 
     def test_no_bootstrap_no_summary(self, tmp_path):
         builder = _builder(tmp_path)
-        result = builder.build_system_prompt()
+        result = asyncio.run(builder.build_system_prompt())
         assert "## AGENTS.md" not in result
         assert "[Archived Context Summary]" not in result
 
@@ -270,7 +271,7 @@ class TestBuildSystemPrompt:
 class TestBuildMessages:
     def test_basic_empty_history(self, tmp_path):
         builder = _builder(tmp_path)
-        messages = builder.build_messages([], "hello")
+        messages = asyncio.run(builder.build_messages([], "hello"))
         assert len(messages) == 2
         assert messages[0]["role"] == "system"
         assert messages[1]["role"] == "user"
@@ -278,7 +279,7 @@ class TestBuildMessages:
 
     def test_runtime_context_injected(self, tmp_path):
         builder = _builder(tmp_path)
-        messages = builder.build_messages([], "hello", channel="cli", chat_id="direct")
+        messages = asyncio.run(builder.build_messages([], "hello", channel="cli", chat_id="direct"))
         user_msg = str(messages[-1]["content"])
         assert "[Runtime Context" in user_msg
         assert "hello" in user_msg
@@ -288,13 +289,13 @@ class TestBuildMessages:
         meta = {
             GOAL_STATE_KEY: {"status": "active", "objective": "Finish docs migration."},
         }
-        messages = builder.build_messages(
+        messages = asyncio.run(builder.build_messages(
             [],
             "hi",
             channel="cli",
             chat_id="x",
             session_metadata=meta,
-        )
+        ))
         user_msg = str(messages[-1]["content"])
         assert "Goal (active):" in user_msg
         assert "Finish docs migration." in user_msg
@@ -305,20 +306,20 @@ class TestBuildMessages:
             GOAL_STATE_KEY: {"status": "active", "objective": "Other chat goal."},
         }
 
-        with_goal = builder.build_messages(
+        with_goal = asyncio.run(builder.build_messages(
             [],
             "hi",
             channel="websocket",
             chat_id="chat-a",
             session_metadata=other_session_meta,
-        )
-        without_goal = builder.build_messages(
+        ))
+        without_goal = asyncio.run(builder.build_messages(
             [],
             "hi",
             channel="websocket",
             chat_id="chat-b",
             session_metadata={},
-        )
+        ))
 
         assert "Other chat goal." in str(with_goal[-1]["content"])
         assert "Other chat goal." not in str(without_goal[-1]["content"])
@@ -327,7 +328,7 @@ class TestBuildMessages:
     def test_consecutive_same_role_merged(self, tmp_path):
         builder = _builder(tmp_path)
         history = [{"role": "user", "content": "previous user message"}]
-        messages = builder.build_messages(history, "new message")
+        messages = asyncio.run(builder.build_messages(history, "new message"))
         assert len(messages) == 2  # system + merged user
         assert "previous user message" in str(messages[1]["content"])
         assert "new message" in str(messages[1]["content"])
@@ -335,7 +336,7 @@ class TestBuildMessages:
     def test_different_role_appended(self, tmp_path):
         builder = _builder(tmp_path)
         history = [{"role": "assistant", "content": "previous response"}]
-        messages = builder.build_messages(history, "new message")
+        messages = asyncio.run(builder.build_messages(history, "new message"))
         assert len(messages) == 3  # system + assistant + user
 
     def test_media_with_history(self, tmp_path):
@@ -343,7 +344,7 @@ class TestBuildMessages:
         png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
         builder = _builder(tmp_path)
         history = [{"role": "assistant", "content": "see this"}]
-        messages = builder.build_messages(history, "check image", media=[str(png)])
+        messages = asyncio.run(builder.build_messages(history, "check image", media=[str(png)]))
         user_msg = messages[-1]["content"]
         assert isinstance(user_msg, list)
         assert any(b.get("type") == "image_url" for b in user_msg)

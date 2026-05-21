@@ -158,7 +158,7 @@ nanobot plugins list      # verify "Webhook" shows as "plugin"
 nanobot onboard           # auto-adds default config for detected plugins
 ```
 
-Edit `~/.nanobot/config.json`:
+Edit `~/.hiperone/config.json`:
 
 ```json
 {
@@ -232,7 +232,7 @@ nanobot channels login <channel_name> --force  # re-authenticate
 | Method / Property | Description |
 |-------------------|-------------|
 | `_handle_message(sender_id, chat_id, content, media?, metadata?, session_key?)` | **Call this when you receive a message.** Checks `is_allowed()`, then publishes to the bus. Automatically sets `_wants_stream` if `supports_streaming` is true. |
-| `is_allowed(sender_id)` | Checks against `config.allow_from`; `"*"` allows all, `[]` denies all. |
+| `is_allowed(sender_id)` | Checks against `config.allow_from`; empty, missing, or `"*"` allows all. |
 | `default_config()` (classmethod) | Returns default config dict for `nanobot onboard`. Override to declare your fields. |
 | `transcribe_audio(file_path)` | Transcribes audio via Groq Whisper (if configured). |
 | `supports_streaming` (property) | `True` when config has `"streaming": true` **and** subclass overrides `send_delta()`. |
@@ -463,9 +463,7 @@ Recommended rendering:
 
 ### Why Pydantic model is required
 
-`BaseChannel.is_allowed()` reads the permission list via `getattr(self.config, "allow_from", [])`. This works for Pydantic models where `allow_from` is a real Python attribute, but **fails silently for plain `dict`** — `dict` has no `allow_from` attribute, so `getattr` always returns the default `[]`, causing all messages to be denied.
-
-Built-in channels use Pydantic config models (subclassing `Base` from `nanobot.config.schema`). Plugin channels **must do the same**.
+`BaseChannel.is_allowed()` accepts Pydantic config models and plain dicts, reading either `allow_from` or `allowFrom`. Built-in channels use Pydantic config models (subclassing `Base` from `nanobot.config.schema`). Plugin channels should do the same so aliases, defaults, and validation stay in one place.
 
 ### Pattern
 

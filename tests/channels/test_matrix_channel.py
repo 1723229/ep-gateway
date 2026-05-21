@@ -615,6 +615,31 @@ async def test_on_message_allowlist_policy_requires_room_id() -> None:
 
 
 @pytest.mark.asyncio
+async def test_on_message_allowlist_policy_empty_rooms_allows_group() -> None:
+    channel = MatrixChannel(
+        _make_config(group_policy="allowlist", group_allow_from=[]),
+        MessageBus(),
+    )
+    client = _FakeAsyncClient("", "", "", None)
+    channel.client = client
+
+    handled: list[str] = []
+
+    async def _fake_handle_message(**kwargs) -> None:
+        handled.append(kwargs["chat_id"])
+
+    channel._handle_message = _fake_handle_message  # type: ignore[method-assign]
+
+    room = SimpleNamespace(room_id="!room:matrix.org", display_name="Room", member_count=3)
+    event = SimpleNamespace(sender="@alice:matrix.org", body="Hello", source={"content": {}})
+
+    await channel._on_message(room, event)
+
+    assert handled == ["!room:matrix.org"]
+    assert client.typing_calls == [("!room:matrix.org", True, TYPING_NOTICE_TIMEOUT_MS)]
+
+
+@pytest.mark.asyncio
 async def test_on_message_room_mention_requires_opt_in() -> None:
     channel = MatrixChannel(_make_config(group_policy="mention"), MessageBus())
     client = _FakeAsyncClient("", "", "", None)

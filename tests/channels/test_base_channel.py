@@ -38,18 +38,18 @@ def test_is_allowed_supports_dict_allow_from_alias() -> None:
     assert channel.is_allowed("alice") is True
 
 
-def test_is_allowed_denies_empty_dict_allow_from() -> None:
+def test_is_allowed_allows_empty_dict_allow_from() -> None:
     channel = _DummyChannel({"allow_from": []}, MessageBus())
 
-    assert channel.is_allowed("alice") is False
+    assert channel.is_allowed("alice") is True
 
 
 def test_is_allowed_handles_none_allow_from() -> None:
     channel = _DummyChannel({"allow_from": None}, MessageBus())
-    assert channel.is_allowed("alice") is False
+    assert channel.is_allowed("alice") is True
 
     channel2 = _DummyChannel({"allowFrom": None}, MessageBus())
-    assert channel2.is_allowed("alice") is False
+    assert channel2.is_allowed("alice") is True
 
 
 def test_is_allowed_star_allows_all() -> None:
@@ -57,39 +57,39 @@ def test_is_allowed_star_allows_all() -> None:
     assert channel.is_allowed("anyone") is True
 
 
-def test_is_allowed_pairing_fallback(monkeypatch) -> None:
-    channel = _DummyChannel({"allowFrom": []}, MessageBus())
-    monkeypatch.setattr(
-        "nanobot.channels.base.is_approved", lambda _ch, sid: sid == "paired"
-    )
-    assert channel.is_allowed("paired") is True
-    assert channel.is_allowed("unknown") is False
-
-
 @pytest.mark.asyncio
-async def test_handle_message_dm_sends_pairing_code(monkeypatch) -> None:
+async def test_handle_message_dm_empty_allow_from_publishes(monkeypatch) -> None:
     channel = _DummyChannel({"allowFrom": []}, MessageBus())
-    monkeypatch.setattr(
-        "nanobot.channels.base.generate_code", lambda _ch, sid: "ABCD-EFGH"
-    )
+    published = []
+
+    async def capture(msg):
+        published.append(msg)
+
+    channel.bus.publish_inbound = capture
 
     await channel._handle_message(
         sender_id="stranger", chat_id="chat1", content="hello", is_dm=True
     )
 
-    assert len(channel._sent) == 1
-    msg = channel._sent[0]
-    assert "ABCD-EFGH" in msg.content
-    assert msg.metadata.get("_pairing_code") == "ABCD-EFGH"
+    assert channel._sent == []
+    assert len(published) == 1
+    assert published[0].content == "hello"
 
 
 @pytest.mark.asyncio
-async def test_handle_message_group_ignores_unknown() -> None:
+async def test_handle_message_group_empty_allow_from_publishes() -> None:
     channel = _DummyChannel({"allowFrom": []}, MessageBus())
+    published = []
+
+    async def capture(msg):
+        published.append(msg)
+
+    channel.bus.publish_inbound = capture
 
     await channel._handle_message(
         sender_id="stranger", chat_id="chat1", content="hello", is_dm=False
     )
 
     assert channel._sent == []
+    assert len(published) == 1
 

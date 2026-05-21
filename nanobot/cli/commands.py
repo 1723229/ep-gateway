@@ -704,6 +704,48 @@ def gateway(
     _run_gateway(cfg, port=port)
 
 
+@app.command()
+def admin(
+    host: str = typer.Option("0.0.0.0", "--host", "-H", help="Admin bind address"),
+    port: int | None = typer.Option(None, "--port", "-p", help="Admin port"),
+    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Workspace directory"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    config: str | None = typer.Option(None, "--config", "-c", help="Path to config file"),
+):
+    """Start the admin HTTP interface with full gateway stack."""
+    if verbose:
+        logger.remove(_log_handler_id)
+        logger.add(
+            sys.stderr,
+            format=(
+                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                "<level>{level: <5}</level> | "
+                "<cyan>{extra[channel]}</cyan> | "
+                "<level>{message}</level>"
+            ),
+            level="DEBUG",
+            colorize=None,
+            filter=lambda record: record["extra"].setdefault("channel", "-") or True,
+        )
+    cfg = _load_runtime_config(config, workspace)
+    from nanobot.config.schema import AdminConfig
+
+    existing = getattr(cfg.channels, "admin", None)
+    base = existing if isinstance(existing, dict) else (existing.model_dump() if existing else {})
+    admin_cfg = AdminConfig(
+        **{
+            **base,
+            "enabled": True,
+            "host": host,
+            "port": port if port is not None else base.get("port", 18080),
+        }
+    )
+    cfg.channels.admin = admin_cfg
+    admin_url = f"http://{host if host != '0.0.0.0' else '127.0.0.1'}:{admin_cfg.port}"
+    console.print(f"{__logo__} Starting nanobot admin on {host}:{admin_cfg.port}...")
+    _run_gateway(cfg, port=cfg.gateway.port, open_browser_url=admin_url)
+
+
 def _run_gateway(
     config: Config,
     *,
@@ -893,6 +935,7 @@ def _run_gateway(
         bus,
         session_manager=session_manager,
         webui_runtime_model_name=_webui_runtime_model_name,
+        cron_service=cron,
     )
 
     def _pick_heartbeat_target() -> tuple[str, str]:
