@@ -413,9 +413,7 @@ class SignalChannel(BaseChannel):
 
         ``_check_inbound_policy`` is the authoritative gate for DM/group
         access, so we skip the base-class ``is_allowed()`` check and publish
-        directly to the bus.  The denied-DM pairing path calls
-        ``super()._handle_message`` instead, which goes through
-        ``is_allowed`` and issues a pairing code.
+        directly to the bus.
         """
         meta = metadata or {}
         if self.supports_streaming:
@@ -762,16 +760,6 @@ class SignalChannel(BaseChannel):
             timestamp=timestamp,
         )
         if not allowed:
-            # Mirror Slack: let denied DMs reach the base-class
-            # _handle_message so it can reply with a pairing code.
-            # Group denials stay dropped.
-            if not is_group_message and self.config.dm.enabled:
-                await super()._handle_message(
-                    sender_id=sender_id,
-                    chat_id=chat_id,
-                    content="",
-                    is_dm=True,
-                )
             return
 
         content, media_paths = self._assemble_inbound_content(
