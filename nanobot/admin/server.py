@@ -205,6 +205,7 @@ def _register_routes(app: FastAPI) -> None:
                 session_key=session_key,
                 channel="admin",
                 chat_id=chat_id,
+                media=media_paths or None,
             )
             response = response_msg.content if response_msg else ""
             return ChatResponse(response=response, session_id=session_key)
@@ -222,6 +223,14 @@ def _register_routes(app: FastAPI) -> None:
             )
 
         session_key = req.session_id
+        media_paths: list[str] = []
+        if req.attachments:
+            from nanobot.admin.files import get_file_path
+            config_ref: Config = app.state.config
+            for att in req.attachments:
+                fpath = get_file_path(config_ref.workspace_path, att.get("file_id", ""))
+                if fpath:
+                    media_paths.append(str(fpath))
 
         async def event_generator():
             yield f"data: {json.dumps({'type': 'start'})}\n\n"
@@ -231,6 +240,7 @@ def _register_routes(app: FastAPI) -> None:
                     session_key=session_key,
                     channel="admin",
                     chat_id=session_key.split(":", 1)[-1] if ":" in session_key else session_key,
+                    media=media_paths or None,
                 )
                 response = response_msg.content if response_msg else ""
                 chunk_size = 20
@@ -310,6 +320,7 @@ def _register_routes(app: FastAPI) -> None:
                             session_key=session_key,
                             channel="admin",
                             chat_id=session_id,
+                            media=media_paths or None,
                         )
                         response = response_msg.content if response_msg else ""
                         await websocket.send_text(json.dumps({

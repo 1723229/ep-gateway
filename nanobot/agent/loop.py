@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import dataclasses
 import inspect
 import os
@@ -61,6 +62,10 @@ if TYPE_CHECKING:
 
 
 UNIFIED_SESSION_KEY = "unified:default"
+_CURRENT_OPENVIKING_SESSION_KEY: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "nanobot_openviking_session_key",
+    default="default",
+)
 
 
 class TurnState(Enum):
@@ -202,7 +207,6 @@ class AgentLoop:
         defaults = AgentDefaults()
         self.skills_config = skills_config or SkillsConfig()
         self.openviking_config = openviking_config
-        self._current_session_key: str = "default"
         self._viking_client_initialized = False
         self.bus = bus
         self.channels_config = channels_config
@@ -576,7 +580,7 @@ class AgentLoop:
             self.tools.register(
                 OVMemoryCommitTool(
                     ov_config=self.openviking_config,
-                    session_key_fn=lambda: self._current_session_key,
+                    session_key_fn=lambda: _CURRENT_OPENVIKING_SESSION_KEY.get(),
                     background_task_scheduler=self._schedule_background,
                 )
             )
@@ -857,6 +861,7 @@ class AgentLoop:
 
         active_session_key = session.key if session else session_key
         file_state_token = bind_file_states(self._file_state_store.for_session(active_session_key))
+        viking_session_token = _CURRENT_OPENVIKING_SESSION_KEY.set(active_session_key or "default")
         try:
             result = await self.runner.run(AgentRunSpec(
                 initial_messages=initial_messages,
@@ -886,6 +891,7 @@ class AgentLoop:
                 ),
             ))
         finally:
+            _CURRENT_OPENVIKING_SESSION_KEY.reset(viking_session_token)
             reset_file_states(file_state_token)
         self._last_usage = result.usage
         if result.stop_reason == "max_iterations":

@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from nanobot.agent.context import ContextBuilder
-from nanobot.agent.loop import AgentLoop
+from nanobot.agent.loop import AgentLoop, _CURRENT_OPENVIKING_SESSION_KEY
+from nanobot.agent.runner import AgentRunResult
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMResponse
@@ -51,6 +52,32 @@ def test_agent_loop_llm_runtime_reflects_current_provider_and_model(tmp_path: Pa
 
     assert runtime.provider is next_provider
     assert runtime.model == "next-model"
+
+
+@pytest.mark.asyncio
+async def test_run_agent_loop_sets_openviking_session_context(tmp_path: Path) -> None:
+    loop = _make_full_loop(tmp_path)
+    session = loop.sessions.get_or_create("admin:chat-42")
+    seen: list[str] = []
+
+    async def fake_run(_spec):
+        seen.append(_CURRENT_OPENVIKING_SESSION_KEY.get())
+        return AgentRunResult(
+            final_content="ok",
+            messages=[{"role": "assistant", "content": "ok"}],
+            stop_reason="stop",
+        )
+
+    loop.runner.run = fake_run  # type: ignore[method-assign]
+
+    await loop._run_agent_loop(
+        [{"role": "user", "content": "hello"}],
+        session=session,
+        session_key=session.key,
+    )
+
+    assert seen == ["admin:chat-42"]
+    assert _CURRENT_OPENVIKING_SESSION_KEY.get() == "default"
 
 
 @pytest.mark.asyncio
