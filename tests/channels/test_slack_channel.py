@@ -655,3 +655,18 @@ def test_slack_channel_uses_channel_aware_allow_policy() -> None:
     channel = SlackChannel(SlackConfig(enabled=True, allow_from=[]), MessageBus())
     assert channel.is_allowed("U1") is True
     assert channel._is_allowed("U1", "C123", "channel") is True
+
+
+def test_slack_empty_allowlists_allow_dm_and_groups() -> None:
+    channel = SlackChannel(
+        SlackConfig(
+            enabled=True,
+            dm={"enabled": True, "policy": "allowlist", "allowFrom": []},
+            group_policy="allowlist",
+            group_allow_from=[],
+        ),
+        MessageBus(),
+    )
+
+    assert channel._is_allowed("U1", "D123", "im") is True
+    assert channel._is_allowed("U1", "C123", "channel") is True
