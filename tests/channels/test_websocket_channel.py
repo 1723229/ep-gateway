@@ -1019,7 +1019,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert body["agent"]["provider"] == "openai"
         assert body["agent"]["model_preset"] == "default"
         assert body["agent"]["max_tokens"] == 8192
-        assert body["agent"]["timezone"] == "UTC"
+        assert body["agent"]["timezone"] == "Asia/Shanghai"
         assert body["agent"]["tool_hint_max_length"] == 40
         presets = {preset["name"]: preset for preset in body["model_presets"]}
         assert presets["default"]["active"] is True
@@ -1058,7 +1058,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert image_providers["gemini"]["label"] == "Gemini"
         assert body["runtime"]["config_path"] == str(config_path)
         workspace_path = body["runtime"]["workspace_path"].replace("\\", "/")
-        assert workspace_path.endswith("/.nanobot/workspace")
+        assert workspace_path.endswith("/.hiperone/workspace")
         assert body["runtime"]["gateway_port"] == 18790
         assert body["advanced"]["exec_enabled"] is True
         assert body["advanced"]["mcp_server_count"] == 0

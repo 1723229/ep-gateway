@@ -628,8 +628,8 @@ async def test_download_and_save_media_returns_absolute_path_in_content(monkeypa
 
 @pytest.mark.asyncio
 async def test_session_key_group_with_root_id_uses_default() -> None:
-    """Group message with root_id still uses the default group-wide session key."""
-    channel = _make_feishu_channel(group_policy="open")
+    """Group message can use group-wide session key when topic isolation is disabled."""
+    channel = _make_feishu_channel(group_policy="open", topic_isolation=False)
     bus_spy = []
     original_publish = channel.bus.publish_inbound
 
@@ -651,14 +651,14 @@ async def test_session_key_group_with_root_id_uses_default() -> None:
     await channel._on_message(event)
 
     assert len(bus_spy) == 1
-    assert bus_spy[0].session_key_override is None
+    assert bus_spy[0].session_key_override == "feishu:oc_abc"
     assert bus_spy[0].session_key == "feishu:oc_abc"
 
 
 @pytest.mark.asyncio
 async def test_session_key_group_no_root_id_uses_default() -> None:
-    """Group message without root_id uses default group-wide session key."""
-    channel = _make_feishu_channel(group_policy="open")
+    """Group message without root_id can use group-wide session key when topic isolation is disabled."""
+    channel = _make_feishu_channel(group_policy="open", topic_isolation=False)
     bus_spy = []
     original_publish = channel.bus.publish_inbound
 
@@ -680,7 +680,7 @@ async def test_session_key_group_no_root_id_uses_default() -> None:
     await channel._on_message(event)
 
     assert len(bus_spy) == 1
-    assert bus_spy[0].session_key_override is None
+    assert bus_spy[0].session_key_override == "feishu:oc_abc"
     assert bus_spy[0].session_key == "feishu:oc_abc"
 
 

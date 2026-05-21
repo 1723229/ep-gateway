@@ -91,7 +91,7 @@ IMAP_PASSWORD=your-password-here
 
 ```bash
 docker run --rm --env-file=./nanobot.env \
-  -v ~/.nanobot:/home/nanobot/.nanobot \
+  -v ~/.hiperone:/root/.hiperone \
   nanobot agent -m "Hello"
 ```
 
@@ -651,7 +651,7 @@ ollama run llama3.2
 - Open Atomic Chat, download a model, and keep the app running. The local API is enabled by default.
 - Copy the model ID exposed by the local API. For example, the model ID for `Qwen 3 32B` might be `qwen3-32b`.
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 ```json
 {
@@ -1417,7 +1417,7 @@ How it works:
 
 Time is context. Context should be precise.
 
-By default, nanobot uses `UTC` for runtime time context. If you want the agent to think in your local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
+By default, nanobot uses `Asia/Shanghai` for runtime time context. To use a different local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
 
 ```json
 {
