@@ -1288,55 +1288,18 @@ For API keys, tokens, and other secrets, see [Environment Variables for Secrets]
 | `tools.exec.sandbox` | `""` | Sandbox backend for shell commands. Set to `"bwrap"` to wrap exec calls in a [bubblewrap](https://github.com/containers/bubblewrap) sandbox — the process can only see the workspace (read-write) and media directory (read-only); config files and API keys are hidden. Automatically enables `restrictToWorkspace` for file tools. **Linux only** — requires `bwrap` installed (`apt install bubblewrap`; pre-installed in the Docker image). Not available on macOS or Windows (bwrap depends on Linux kernel namespaces). |
 | `tools.exec.enable` | `true` | When `false`, the shell `exec` tool is not registered at all. Use this to completely disable shell command execution. |
 | `tools.exec.pathAppend` | `""` | Extra directories to append to `PATH` when running shell commands (e.g. `/usr/sbin` for `ufw`). |
-| `channels.*.allowFrom` | omitted | Access control per channel. Omit to use pairing-only mode; set `["*"]` to allow everyone; or list specific user IDs. See [Pairing](#pairing) for details. |
+| `channels.*.allowFrom` | omitted | Access control per channel. Empty, omitted, or `["*"]` allows everyone; list specific user IDs to restrict access. |
 
 **Docker security**: The repository Dockerfile includes bubblewrap and currently runs with `HOME=/root`. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
 
 
 ## Pairing
 
-Pairing lets users get access to the bot through a simple code exchange — no config editing required. This works for both new users and existing users connecting from a new channel (e.g. someone already approved on Telegram now setting up Discord).
-
-### How it works
-
-1. A user sends a DM to the bot on any channel (Telegram, Discord, Slack, etc.) where they aren't yet approved.
-2. The bot replies with a pairing code (like `ABCD-EFGH`) and tells them to forward it to you.
-3. You approve the code:
-
-```text
-/pairing approve ABCD-EFGH
-```
-
-4. The user can now chat with the bot normally.
-
-Pairing only works in **DMs** — unapproved users in group chats are silently ignored.
-
-### Pairing-only mode
-
-By default, if you don't set `allowFrom`, anyone who isn't approved yet will get a pairing code when they DM the bot. This means you can skip `allowFrom` entirely and manage all access through pairing:
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true
-    }
-  }
-}
-```
-
-If you prefer to allow everyone without approval:
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "allowFrom": ["*"]
-    }
-  }
-}
-```
+Pairing commands manage pending and approved pairing records for deployments
+that create pairing codes through custom flows or older channel behavior.
+Current built-in channel allowlists do not create pairing codes automatically:
+empty or omitted `allowFrom` allows everyone, and a non-empty allowlist simply
+ignores unlisted senders.
 
 ### Managing access
 

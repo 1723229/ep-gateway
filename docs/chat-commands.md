@@ -24,15 +24,13 @@ These commands work inside chat channels and interactive agent sessions:
 
 ## Pairing
 
-When someone sends a DM to the bot and isn't on the allowlist — whether it's a new user or an existing user on a new channel — nanobot automatically replies with a **pairing code** (like `ABCD-EFGH`) that expires in 10 minutes. To grant them access:
+Pairing commands manage pending and approved pairing records for deployments
+that create pairing codes through custom flows or older channel behavior.
+Current built-in channel allowlists do not create pairing codes automatically.
 
-```text
-/pairing approve ABCD-EFGH
-```
+To see pending requests, use `/pairing`. To remove someone later, use `/pairing revoke <user_id>` — you can find user IDs in the `/pairing list` output.
 
-To see who's waiting, use `/pairing`. To remove someone later, use `/pairing revoke <user_id>` — you can find user IDs in the `/pairing list` output.
-
-See [Configuration: Pairing](./configuration.md#pairing) for the full setup guide.
+See [Configuration: Pairing](./configuration.md#pairing) for details.
 
 ## Model Presets
 

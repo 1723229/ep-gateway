@@ -221,7 +221,7 @@ for reliable encryption, password login is recommended instead. If the
 
 | Option | Description |
 |--------|-------------|
-| `allowFrom` | User IDs allowed to interact. Empty denies all; use `["*"]` to allow everyone. |
+| `allowFrom` | User IDs allowed to interact. Empty, omitted, or `["*"]` allows everyone; list specific IDs to restrict access. |
 | `groupPolicy` | `open` (default), `mention`, or `allowlist`. |
 | `groupAllowFrom` | Room allowlist (used when policy is `allowlist`). |
 | `allowRoomMentions` | Accept `@room` mentions in mention mode. |
@@ -717,7 +717,7 @@ signal-cli -a +1234567890 daemon --http localhost:8080
 
 > - `phoneNumber`: Your registered Signal phone number.
 > - `daemonHost` / `daemonPort`: Where signal-cli daemon is listening (default `localhost:8080`).
-> - `dm.policy`: `"open"` (anyone can DM) or `"allowlist"` (only listed numbers/UUIDs). When `"allowlist"`, unlisted DM senders receive a pairing code.
+> - `dm.policy`: `"open"` (anyone can DM) or `"allowlist"` (restrict to listed numbers/UUIDs when the list is non-empty).
 > - `dm.allowFrom`: List of allowed phone numbers or UUIDs (used when policy is `"allowlist"`).
 > - `group.policy`: `"open"` (all groups) or `"allowlist"` (only listed group IDs).
 > - `group.requireMention`: When `true` (default), the bot only responds in groups when @mentioned.

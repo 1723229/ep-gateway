@@ -1426,7 +1426,7 @@ async def test_static_token_accepts_issued_token_as_fallback(bus: MagicMock) -> 
 
 
 @pytest.mark.asyncio
-async def test_allow_from_empty_list_denies_all(bus: MagicMock) -> None:
+async def test_allow_from_empty_list_allows_all(bus: MagicMock) -> None:
     port = 29886
     channel = _ch(bus, port=port, allowFrom=[])
 
@@ -1434,10 +1434,10 @@ async def test_allow_from_empty_list_denies_all(bus: MagicMock) -> None:
     await asyncio.sleep(0.3)
 
     try:
-        with pytest.raises(websockets.exceptions.InvalidStatus) as exc_info:
-            async with websockets.connect(f"ws://127.0.0.1:{port}/ws?client_id=anyone"):
-                pass
-        assert exc_info.value.response.status_code == 403
+        async with websockets.connect(f"ws://127.0.0.1:{port}/ws?client_id=anyone") as client:
+            ready = json.loads(await client.recv())
+            assert ready["event"] == "ready"
+            assert ready["client_id"] == "anyone"
     finally:
         await channel.stop()
         await server_task

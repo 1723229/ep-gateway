@@ -670,3 +670,4 @@ def test_slack_empty_allowlists_allow_dm_and_groups() -> None:
 
     assert channel._is_allowed("U1", "D123", "im") is True
     assert channel._is_allowed("U1", "C123", "channel") is True
+    assert channel._should_respond_in_channel("message", "hello", "C123") is True

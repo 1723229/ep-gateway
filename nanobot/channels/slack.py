@@ -655,7 +655,7 @@ class SlackChannel(BaseChannel):
                 return True
             return self._bot_user_id is not None and f"<@{self._bot_user_id}>" in text
         if self.config.group_policy == "allowlist":
-            return chat_id in self.config.group_allow_from
+            return not self.config.group_allow_from or chat_id in self.config.group_allow_from
         return False
 
     def is_allowed(self, sender_id: str) -> bool:
