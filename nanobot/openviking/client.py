@@ -214,6 +214,7 @@ class VikingClient:
         cls,
         cfg: Any,
         agent_id: str | None = None,
+        full_config: Any | None = None,
     ) -> "VikingClient":
         """Create a VikingClient from an OpenVikingConfig instance.
 
@@ -222,9 +223,10 @@ class VikingClient:
         Provider credentials are still resolved against the full config when
         an explicit key/base is not set on the OpenVikingConfig itself.
         """
-        from nanobot.config.loader import load_config
+        if full_config is None:
+            from nanobot.config.loader import load_config
 
-        full_config = load_config()
+            full_config = load_config()
         embedding_api_key, embedding_base_url = cls._resolve_provider_credentials(
             config=full_config,
             model=cfg.embedding_model,

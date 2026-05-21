@@ -54,6 +54,7 @@ from nanobot.utils.runtime import EMPTY_FINAL_RESPONSE_MESSAGE
 if TYPE_CHECKING:
     from nanobot.config.schema import (
         ChannelsConfig,
+        Config,
         OpenVikingConfig,
         ProviderConfig,
         ToolsConfig,
@@ -200,6 +201,7 @@ class AgentLoop:
         model_preset: str | None = None,
         preset_snapshot_loader: preset_helpers.PresetSnapshotLoader | None = None,
         runtime_model_publisher: Callable[[str, str | None], None] | None = None,
+        full_config: Config | None = None,
     ):
         from nanobot.config.schema import SkillsConfig, ToolsConfig
 
@@ -207,6 +209,8 @@ class AgentLoop:
         defaults = AgentDefaults()
         self.skills_config = skills_config or SkillsConfig()
         self.openviking_config = openviking_config
+        self._full_config = full_config
+        self._viking_client: Any | None = None
         self._viking_client_initialized = False
         self.bus = bus
         self.channels_config = channels_config
@@ -385,6 +389,7 @@ class AgentLoop:
             disabled_skills=defaults.disabled_skills,
             skills_config=skills_config,
             openviking_config=openviking_config,
+            full_config=config,
             session_ttl_minutes=defaults.session_ttl_minutes,
             consolidation_ratio=defaults.consolidation_ratio,
             max_messages=defaults.max_messages,
@@ -535,9 +540,13 @@ class AgentLoop:
                 return
             from nanobot.openviking.client import VikingClient
 
-            client = await VikingClient.from_openviking_config(self.openviking_config)
+            client = await VikingClient.from_openviking_config(
+                self.openviking_config,
+                full_config=self._full_config,
+            )
             max_commits = getattr(self.openviking_config, "max_concurrent_commits", 1)
             client.set_max_concurrent_commits(max_commits)
+            self._viking_client = client
             self.context.set_viking_client(client)
 
             from nanobot.agent.tools.openviking import _OVTool
@@ -1103,10 +1112,22 @@ class AgentLoop:
             self._webui_turns.discard(session_key)
 
     async def close_mcp(self) -> None:
-        """Drain pending background archives, then close MCP connections."""
+        """Drain pending background archives, then close OpenViking and MCP connections."""
         if self._background_tasks:
             await asyncio.gather(*self._background_tasks, return_exceptions=True)
             self._background_tasks.clear()
+        if self._viking_client is not None:
+            try:
+                await self._viking_client.aclose()
+            except Exception:
+                logger.debug("OpenViking cleanup error (can be ignored)")
+            finally:
+                self._viking_client = None
+                self.context._viking_client = None
+                with suppress(Exception):
+                    from nanobot.agent.tools.openviking import _OVTool
+
+                    _OVTool._shared_client = None
         for name, stack in self._mcp_stacks.items():
             try:
                 await stack.aclose()

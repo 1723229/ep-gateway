@@ -9,6 +9,7 @@ from nanobot.agent.loop import AgentLoop, _CURRENT_OPENVIKING_SESSION_KEY
 from nanobot.agent.runner import AgentRunResult
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
+from nanobot.config.schema import Config
 from nanobot.providers.base import LLMResponse
 from nanobot.session.goal_state import GOAL_STATE_KEY
 from nanobot.session.manager import Session, SessionManager
@@ -78,6 +79,68 @@ async def test_run_agent_loop_sets_openviking_session_context(tmp_path: Path) ->
 
     assert seen == ["admin:chat-42"]
     assert _CURRENT_OPENVIKING_SESSION_KEY.get() == "default"
+
+
+@pytest.mark.asyncio
+async def test_ensure_viking_client_uses_runtime_config(monkeypatch, tmp_path: Path) -> None:
+    config = Config.model_validate(
+        {
+            "agents": {"defaults": {"workspace": str(tmp_path)}},
+            "openviking": {
+                "enabled": True,
+                "mode": "remote",
+                "serverUrl": "https://viking.example.com",
+                "embeddingModel": "openai/text-embedding-3-large",
+            },
+        }
+    )
+    provider = MagicMock()
+    provider.get_default_model.return_value = "test-model"
+    provider.chat_with_retry = AsyncMock(return_value=LLMResponse(content="ok"))
+    provider.generation.max_tokens = 4096
+    seen: dict[str, object] = {}
+
+    class FakeVikingClient:
+        def set_max_concurrent_commits(self, _n: int) -> None:
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        @classmethod
+        async def from_openviking_config(cls, ov_config, *, full_config=None, **_kwargs):
+            seen["ov_config"] = ov_config
+            seen["full_config"] = full_config
+            return cls()
+
+    monkeypatch.setattr("nanobot.openviking.HAS_OPENVIKING", True)
+    monkeypatch.setattr("nanobot.openviking.client.VikingClient", FakeVikingClient)
+
+    loop = AgentLoop.from_config(config, provider=provider)
+    await loop._ensure_viking_client()
+
+    assert seen["ov_config"] is config.openviking
+    assert seen["full_config"] is config
+    await loop.close_mcp()
+
+
+@pytest.mark.asyncio
+async def test_close_mcp_closes_openviking_client(tmp_path: Path) -> None:
+    loop = _make_full_loop(tmp_path)
+    client = AsyncMock()
+    loop._viking_client = client
+    loop.context.set_viking_client(client)
+
+    from nanobot.agent.tools.openviking import _OVTool
+
+    _OVTool._shared_client = client
+
+    await loop.close_mcp()
+
+    client.aclose.assert_awaited_once()
+    assert loop._viking_client is None
+    assert loop.context._viking_client is None
+    assert _OVTool._shared_client is None
 
 
 @pytest.mark.asyncio
