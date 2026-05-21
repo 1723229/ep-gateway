@@ -24,12 +24,6 @@ from nanobot.agent.memory import Consolidator, Dream
 from nanobot.agent.progress_hook import AgentProgressHook
 from nanobot.agent.runner import _MAX_INJECTIONS_PER_TURN, AgentRunner, AgentRunSpec
 from nanobot.agent.subagent import SubagentManager
-from nanobot.agent.tools.ask import (
-    ask_user_options_from_messages,
-    ask_user_outbound,
-    ask_user_tool_result_messages,
-    pending_ask_user_id,
-)
 from nanobot.agent.tools.file_state import FileStateStore, bind_file_states, reset_file_states
 from nanobot.agent.tools.message import MessageTool
 from nanobot.agent.tools.platform_access import register_platform_access_tools
@@ -1355,22 +1349,16 @@ class AgentLoop:
         logger.info("Response to {}:{}: {}", msg.channel, msg.sender_id, preview)
 
         meta = dict(msg.metadata or {})
-        if on_stream is not None and stop_reason not in {"error", "tool_error", "ask_user"}:
+        if on_stream is not None and stop_reason not in {"error", "tool_error"}:
             meta["_streamed"] = True
         if turn_latency_ms is not None:
             meta["latency_ms"] = int(turn_latency_ms)
-        content, buttons = ask_user_outbound(
-            final_content,
-            ask_user_options_from_messages(all_msgs) if stop_reason == "ask_user" else [],
-            msg.channel,
-        )
 
         return OutboundMessage(
             channel=msg.channel,
             chat_id=msg.chat_id,
-            content=content or "",
+            content=final_content,
             metadata=meta,
-            buttons=buttons,
         )
 
     async def _state_restore(self, ctx: TurnContext) -> TurnState:
@@ -1459,14 +1447,6 @@ class AgentLoop:
         ctx.initial_messages = await self._build_initial_messages(
             ctx.msg, ctx.session, ctx.history, ctx.pending_summary
         )
-        pending_ask_id = pending_ask_user_id(ctx.history)
-        if pending_ask_id is not None:
-            ctx.initial_messages = ask_user_tool_result_messages(
-                ctx.initial_messages[:-1],
-                pending_ask_id,
-                ctx.msg.content,
-            )
-            return "ok"
         ctx.user_persisted_early = self._persist_user_message_early(
             ctx.msg, ctx.session
         )

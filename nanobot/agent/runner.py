@@ -13,7 +13,6 @@ from typing import Any
 from loguru import logger
 
 from nanobot.agent.hook import AgentHook, AgentHookContext
-from nanobot.agent.tools.ask import AskUserInterrupt
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
 from nanobot.utils.file_edit_events import (
@@ -344,8 +343,6 @@ class AgentRunner:
                 context.tool_events = list(new_events)
                 completed_tool_results: list[dict[str, Any]] = []
                 for tool_call, result in zip(response.tool_calls, results):
-                    if isinstance(fatal_error, AskUserInterrupt) and tool_call.name == "ask_user":
-                        break
                     tool_message = {
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -359,17 +356,6 @@ class AgentRunner:
                     }
                     messages.append(tool_message)
                     completed_tool_results.append(tool_message)
-                if isinstance(fatal_error, AskUserInterrupt):
-                    final_content = fatal_error.question
-                    stop_reason = "ask_user"
-                    attempted_count = len(results)
-                    assistant_message["tool_calls"] = assistant_message.get("tool_calls", [])[:attempted_count]
-                    context.final_content = final_content
-                    context.stop_reason = stop_reason
-                    if hook.wants_streaming():
-                        await hook.on_stream_end(context, resuming=False)
-                    await hook.after_iteration(context)
-                    break
                 if fatal_error is not None:
                     error = f"Error: {type(fatal_error).__name__}: {fatal_error}"
                     final_content = error
@@ -903,12 +889,6 @@ class AgentRunner:
                     progress_callback,
                     [build_file_edit_error_event(file_edit_tracker, str(exc))],
                 )
-            if isinstance(exc, AskUserInterrupt):
-                return "", {
-                    "name": tool_call.name,
-                    "status": "waiting",
-                    "detail": str(exc),
-                }, exc
             event = {
                 "name": tool_call.name,
                 "status": "error",
@@ -1313,12 +1293,6 @@ class AgentRunner:
         batches: list[list[ToolCallRequest]] = []
         current: list[ToolCallRequest] = []
         for tool_call in tool_calls:
-            if tool_call.name == "ask_user":
-                if current:
-                    batches.append(current)
-                    current = []
-                batches.append([tool_call])
-                break
             get_tool = getattr(spec.tools, "get", None)
             tool = get_tool(tool_call.name) if callable(get_tool) else None
             can_batch = bool(tool and tool.concurrency_safe)
