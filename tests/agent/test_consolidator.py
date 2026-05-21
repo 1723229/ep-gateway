@@ -143,7 +143,7 @@ class TestConsolidatorTokenBudget:
 
         consolidator._build_messages = build_messages
 
-        consolidator.estimate_session_prompt_tokens(session)
+        await consolidator.estimate_session_prompt_tokens(session)
 
         assert len(captured["history"]) == 160
         assert captured["history"][0]["content"].endswith("msg-0")

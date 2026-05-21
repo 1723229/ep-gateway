@@ -1,6 +1,6 @@
 # Configuration
 
-Config file: `~/.nanobot/config.json`
+Config file: `~/.hiperone/config.json`
 
 > [!NOTE]
 > If your config file is older than the current schema, you can refresh it without overwriting your existing values:
@@ -384,7 +384,7 @@ No `providers.openaiCodex` block is needed in `config.json`; `nanobot provider l
 nanobot provider login openai-codex
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.hiperone/config.json`):
 ```json
 {
   "agents": {
@@ -400,10 +400,10 @@ nanobot provider login openai-codex
 nanobot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -422,7 +422,7 @@ No `providers.githubCopilot` block is needed in `config.json`; `nanobot provider
 nanobot provider login github-copilot
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.hiperone/config.json`):
 ```json
 {
   "agents": {
@@ -438,10 +438,10 @@ nanobot provider login github-copilot
 nanobot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -584,7 +584,7 @@ Run a local model with Ollama, then add to config:
 ollama run llama3.2
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 ```json
 {
   "providers": {
@@ -616,7 +616,7 @@ ollama run llama3.2
 - Load a model (e.g., Llama, Mistral, Qwen)
 - Click "Start Server" (default port: 1234)
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 ```json
 {
   "providers": {
@@ -729,7 +729,7 @@ docker run -d \
   --target_device GPU
 ```
 
-**3. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**3. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 ```json
 {
@@ -762,7 +762,7 @@ Run your own model with vLLM or any OpenAI-compatible server, then add to config
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 *Provider (set API key to null for local servers):*
 ```json
@@ -934,7 +934,7 @@ When `modelPreset` is `null` or omitted, startup uses the implicit `default` pre
 
 ## Channel Settings
 
-Global settings that apply to all channels. Configure under the `channels` section in `~/.nanobot/config.json`:
+Global settings that apply to all channels. Configure under the `channels` section in `~/.hiperone/config.json`:
 
 ```json
 {
@@ -1000,7 +1000,7 @@ When a channel `send()` raises, nanobot retries at the channel-manager layer. By
 
 ## Web Tools
 
-nanobot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.nanobot/config.json` under `tools.web`.
+nanobot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.hiperone/config.json` under `tools.web`.
 
 If you want to disable them, which removes both `web_search` and `web_fetch` from the tool list sent to the LLM, set `tools.web.enable` to `false`:
 
@@ -1040,7 +1040,7 @@ If you need to allow trusted private ranges such as Tailscale / CGNAT addresses,
 
 ### Web Search
 
-nanobot supports multiple web search providers. Configure in `~/.nanobot/config.json` under `tools.web.search`.
+nanobot supports multiple web search providers. Configure in `~/.hiperone/config.json` under `tools.web.search`.
 
 By default, web search uses `duckduckgo`, and it works out of the box without an API key.
 
@@ -1290,7 +1290,7 @@ For API keys, tokens, and other secrets, see [Environment Variables for Secrets]
 | `tools.exec.pathAppend` | `""` | Extra directories to append to `PATH` when running shell commands (e.g. `/usr/sbin` for `ufw`). |
 | `channels.*.allowFrom` | omitted | Access control per channel. Omit to use pairing-only mode; set `["*"]` to allow everyone; or list specific user IDs. See [Pairing](#pairing) for details. |
 
-**Docker security**: The official Docker image runs as a non-root user (`nanobot`, UID 1000) with bubblewrap pre-installed. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
+**Docker security**: The repository Dockerfile includes bubblewrap and currently runs with `HOME=/root`. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
 
 
 ## Pairing

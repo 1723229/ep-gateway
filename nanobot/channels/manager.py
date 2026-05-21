@@ -57,11 +57,13 @@ class ChannelManager:
         *,
         session_manager: "SessionManager | None" = None,
         webui_runtime_model_name: Callable[[], str | None] | None = None,
+        cron_service: Any = None,
     ):
         self.config = config
         self.bus = bus
         self._session_manager = session_manager
         self._webui_runtime_model_name = webui_runtime_model_name
+        self._cron_service = cron_service
         self.channels: dict[str, BaseChannel] = {}
         self._dispatch_task: asyncio.Task | None = None
         self._origin_reply_fingerprints: dict[tuple[str, str, str], str] = {}
@@ -104,7 +106,11 @@ class ChannelManager:
                 continue
             try:
                 kwargs: dict[str, Any] = {}
-                if cls.name == "websocket":
+                if cls.name == "admin":
+                    kwargs["session_manager"] = self._session_manager
+                    kwargs["full_config"] = self.config
+                    kwargs["cron_service"] = self._cron_service
+                elif cls.name == "websocket":
                     if self._session_manager is not None:
                         kwargs["session_manager"] = self._session_manager
                         static_path = _default_webui_dist()

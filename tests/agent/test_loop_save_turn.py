@@ -933,17 +933,18 @@ def test_prompt_merge_does_not_replace_standalone_subagent_history_entry(tmp_pat
     assert inserted is True
 
     builder = ContextBuilder(tmp_path)
-    projected = builder.build_messages(
+    projected = asyncio.run(builder.build_messages(
         history=session.get_history(max_messages=0),
         current_message="",
         current_role="assistant",
         channel="cli",
         chat_id="merge",
-    )
+    ))
 
     non_system = [m for m in projected if m.get("role") != "system"]
     assert len(non_system) == 2
     assert "subagent result" in non_system[-1]["content"]
+    assert non_system[0]["content"] == "previous assistant"
     assert session.messages[-1]["content"] == "subagent result"
     assert session.messages[-1]["injected_event"] == "subagent_result"
 
