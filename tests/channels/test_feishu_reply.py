@@ -585,7 +585,7 @@ async def test_on_message_audio_publishes_downloaded_path_and_transcription() ->
 
     channel.bus.publish_inbound = capture
     channel._download_and_save_media = AsyncMock(
-        return_value=(r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg", "[audio: voice.ogg]")
+        return_value=(r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg", "[audio: voice.ogg]")
     )
     channel.transcribe_audio = AsyncMock(return_value="hello from voice")
     channel._add_reaction = AsyncMock(return_value=None)
@@ -600,9 +600,9 @@ async def test_on_message_audio_publishes_downloaded_path_and_transcription() ->
     channel._download_and_save_media.assert_awaited_once_with(
         "audio", {"file_key": "audio_key", "duration": 1000}, "om_audio"
     )
-    channel.transcribe_audio.assert_awaited_once_with(r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg")
+    channel.transcribe_audio.assert_awaited_once_with(r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg")
     assert len(captured) == 1
-    assert captured[0].media == [r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg"]
+    assert captured[0].media == [r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg"]
     assert captured[0].content == "[transcription: hello from voice]"
 
 

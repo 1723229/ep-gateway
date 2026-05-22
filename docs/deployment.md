@@ -133,7 +133,7 @@ which nanobot   # e.g. /Users/youruser/.local/bin/nanobot
 
 Use that exact path in the plist. It keeps the Python environment from your install method.
 
-**2. Create `~/Library/LaunchAgents/ai.nanobot.gateway.plist`:**
+**2. Create `~/Library/LaunchAgents/ai.hiperone.gateway.plist`:**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -141,7 +141,7 @@ Use that exact path in the plist. It keeps the Python environment from your inst
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>ai.nanobot.gateway</string>
+  <string>ai.hiperone.gateway</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -176,17 +176,17 @@ Use that exact path in the plist. It keeps the Python environment from your inst
 
 ```bash
 mkdir -p ~/Library/LaunchAgents ~/.hiperone/logs
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.nanobot.gateway.plist
-launchctl enable gui/$(id -u)/ai.nanobot.gateway
-launchctl kickstart -k gui/$(id -u)/ai.nanobot.gateway
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hiperone.gateway.plist
+launchctl enable gui/$(id -u)/ai.hiperone.gateway
+launchctl kickstart -k gui/$(id -u)/ai.hiperone.gateway
 ```
 
 **Common operations:**
 
 ```bash
-launchctl list | grep ai.nanobot.gateway
-launchctl kickstart -k gui/$(id -u)/ai.nanobot.gateway   # restart
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.nanobot.gateway.plist
+launchctl list | grep ai.hiperone.gateway
+launchctl kickstart -k gui/$(id -u)/ai.hiperone.gateway   # restart
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.hiperone.gateway.plist
 ```
 
 After editing the plist, run `launchctl bootout ...` and `launchctl bootstrap ...` again.
