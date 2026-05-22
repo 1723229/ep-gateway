@@ -22,6 +22,7 @@ from nanobot.bus.queue import MessageBus
 from nanobot.channels.base import BaseChannel
 from nanobot.config.paths import get_media_dir
 from nanobot.config.schema import Base
+from nanobot.pairing import is_approved
 from nanobot.utils.helpers import safe_filename, split_message
 
 
@@ -375,14 +376,27 @@ class SignalChannel(BaseChannel):
         matches the per-policy DM gate.
         """
         allow_list = self.config.allow_from
-        if not self.config.dm.enabled and not self.config.group.enabled:
-            return False
-        if not allow_list:
-            return True
         if "*" in allow_list:
             return True
         if self._sender_matches_allowlist(sender_id, allow_list):
             return True
+        if self._sender_approved_via_pairing(sender_id):
+            return True
+        if not allow_list:
+            self.logger.warning("allow_from is empty — all access denied")
+        return False
+
+    def _sender_approved_via_pairing(self, sender_id: str) -> bool:
+        """Return True if any normalized variant of sender_id is in the pairing store.
+
+        Pairing approval may be recorded under any of the identifier forms
+        signal exposes (phone with/without ``+``, UUID, ACI), so we check
+        each part of the pipe-joined composite against ``is_approved``.
+        """
+        for part in str(sender_id).split("|"):
+            for variant in self._normalize_signal_id(part):
+                if is_approved(self.name, variant):
+                    return True
         return False
 
     async def _handle_message(
@@ -399,7 +413,9 @@ class SignalChannel(BaseChannel):
 
         ``_check_inbound_policy`` is the authoritative gate for DM/group
         access, so we skip the base-class ``is_allowed()`` check and publish
-        directly to the bus.
+        directly to the bus.  The denied-DM pairing path calls
+        ``super()._handle_message`` instead, which goes through
+        ``is_allowed`` and issues a pairing code.
         """
         meta = metadata or {}
         if self.supports_streaming:
@@ -746,6 +762,16 @@ class SignalChannel(BaseChannel):
             timestamp=timestamp,
         )
         if not allowed:
+            # Mirror Slack: let denied DMs reach the base-class
+            # _handle_message so it can reply with a pairing code.
+            # Group denials stay dropped.
+            if not is_group_message and self.config.dm.enabled:
+                await super()._handle_message(
+                    sender_id=sender_id,
+                    chat_id=chat_id,
+                    content="",
+                    is_dm=True,
+                )
             return
 
         content, media_paths = self._assemble_inbound_content(
@@ -805,7 +831,6 @@ class SignalChannel(BaseChannel):
                 return False, chat_id
             if (
                 self.config.group.policy == "allowlist"
-                and self.config.group.allow_from
                 and chat_id not in self.config.group.allow_from
             ):
                 self.logger.info(
@@ -838,10 +863,7 @@ class SignalChannel(BaseChannel):
             self.logger.debug("Ignoring DM from {} (DMs disabled)", sender_id)
             return False, chat_id
         if self.config.dm.policy == "allowlist":
-            if (
-                self.config.dm.allow_from
-                and not self._sender_matches_allowlist(sender_id, self.config.dm.allow_from)
-            ):
+            if not self._sender_matches_allowlist(sender_id, self.config.dm.allow_from):
                 self.logger.debug(
                     "Ignoring DM from {} (policy: {})", sender_id, self.config.dm.policy
                 )
