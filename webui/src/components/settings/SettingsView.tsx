@@ -216,7 +216,7 @@ export function SettingsView({
     provider: "",
     modelPreset: "default",
     timezone: "UTC",
-    botName: "nanobot",
+    botName: "hiperone",
     botIcon: "",
     toolHintMaxLength: 40,
   });
@@ -870,7 +870,7 @@ function OverviewSettings({
                 <Bot className="h-6 w-6" aria-hidden />
               </span>
               <div className="min-w-0">
-                <div className="text-[12px] font-medium text-muted-foreground">nanobot</div>
+                <div className="text-[12px] font-medium text-muted-foreground">hiperone</div>
                 <div className="mt-0.5 truncate text-[18px] font-semibold leading-6 text-foreground">
                   {settings.agent.model}
                 </div>

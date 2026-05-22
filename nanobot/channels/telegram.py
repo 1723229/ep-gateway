@@ -801,7 +801,7 @@ class TelegramChannel(BaseChannel):
         if not self.is_allowed(self._sender_id(user)):
             return
         await update.message.reply_text(
-            f"👋 Hi {user.first_name}! I'm nanobot.\n\n"
+            f"👋 Hi {user.first_name}! I'm HiperOne.\n\n"
             "Send me a message and I'll respond!\n"
             "Type /help to see available commands."
         )

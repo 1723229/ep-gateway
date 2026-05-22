@@ -262,22 +262,22 @@ def test_exec_extract_absolute_paths_captures_posix_absolute_paths() -> None:
 
 
 def test_exec_extract_absolute_paths_captures_home_paths() -> None:
-    cmd = "cat ~/.nanobot/config.json > ~/out.txt"
+    cmd = "cat ~/.hiperone/config.json > ~/out.txt"
     paths = ExecTool._extract_absolute_paths(cmd)
-    assert "~/.nanobot/config.json" in paths
+    assert "~/.hiperone/config.json" in paths
     assert "~/out.txt" in paths
 
 
 def test_exec_extract_absolute_paths_captures_quoted_paths() -> None:
-    cmd = 'cat "/tmp/data.txt" "~/.nanobot/config.json"'
+    cmd = 'cat "/tmp/data.txt" "~/.hiperone/config.json"'
     paths = ExecTool._extract_absolute_paths(cmd)
     assert "/tmp/data.txt" in paths
-    assert "~/.nanobot/config.json" in paths
+    assert "~/.hiperone/config.json" in paths
 
 
 def test_exec_guard_blocks_home_path_outside_workspace(tmp_path) -> None:
     tool = ExecTool(restrict_to_workspace=True)
-    error = tool._guard_command("cat ~/.nanobot/config.json", str(tmp_path))
+    error = tool._guard_command("cat ~/.hiperone/config.json", str(tmp_path))
     assert error is not None
     assert error.startswith(
         "Error: Command blocked by safety guard (path outside working dir)"
@@ -287,7 +287,7 @@ def test_exec_guard_blocks_home_path_outside_workspace(tmp_path) -> None:
 
 def test_exec_guard_blocks_quoted_home_path_outside_workspace(tmp_path) -> None:
     tool = ExecTool(restrict_to_workspace=True)
-    error = tool._guard_command('cat "~/.nanobot/config.json"', str(tmp_path))
+    error = tool._guard_command('cat "~/.hiperone/config.json"', str(tmp_path))
     assert error is not None
     assert error.startswith(
         "Error: Command blocked by safety guard (path outside working dir)"
@@ -649,8 +649,13 @@ async def test_exec_head_tail_truncation(tmp_path) -> None:
 async def test_exec_timeout_parameter() -> None:
     """LLM-supplied timeout should override the constructor default."""
     tool = ExecTool(timeout=60)
+    command = subprocess.list2cmdline([
+        sys.executable,
+        "-c",
+        "import time; time.sleep(10)",
+    ])
     # A very short timeout should cause the command to be killed
-    result = await tool.execute(command="sleep 10", timeout=1)
+    result = await tool.execute(command=command, timeout=1)
     assert "timed out" in result
     assert "1 seconds" in result
 

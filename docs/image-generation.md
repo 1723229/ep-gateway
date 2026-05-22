@@ -2,7 +2,7 @@
 
 nanobot can generate and edit images through the `generate_image` tool. In the WebUI, users can enable **Image Generation** from the composer, choose an aspect ratio, and keep iterating on generated images inside the same chat.
 
-The feature is disabled by default. Enable it in `~/.nanobot/config.json`, configure a supported image provider, then restart the gateway.
+The feature is disabled by default. Enable it in `~/.hiperone/config.json`, configure a supported image provider, then restart the gateway.
 
 ## Quick Setup
 
@@ -225,8 +225,8 @@ StepPlan is StepFun's subscription tier and uses a different API base URL. The i
 Generated images are stored under the active nanobot instance's media directory:
 
 ```text
-~/.nanobot/media/generated/YYYY-MM-DD/img_<id>.<ext>
-~/.nanobot/media/generated/YYYY-MM-DD/img_<id>.json
+~/.hiperone/media/generated/YYYY-MM-DD/img_<id>.<ext>
+~/.hiperone/media/generated/YYYY-MM-DD/img_<id>.json
 ```
 
 For non-default config locations, the media directory is relative to the active config file's directory.
@@ -278,4 +278,3 @@ Use the reference image. Keep the same robot and composition, change the palette
 | AIHubMix says `Incorrect model ID` | Use `model: "gpt-image-2-free"`; nanobot expands it to the required `openai/gpt-image-2-free` model path internally |
 | Generation times out | Try a smaller/default image size, set AIHubMix `extraBody.quality` to `"low"`, or retry later |
 | Reference image rejected | Reference image paths must be inside the workspace or nanobot media directory and must be valid image files |
-

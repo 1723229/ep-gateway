@@ -53,13 +53,13 @@ describe("webui API helpers", () => {
       model: "openrouter/test",
       provider: "openrouter",
       timezone: "Asia/Shanghai",
-      botName: "nanobot",
+      botName: "hiperone",
       botIcon: "nb",
       toolHintMaxLength: 120,
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/settings/update?model_preset=default&model=openrouter%2Ftest&provider=openrouter&timezone=Asia%2FShanghai&bot_name=nanobot&bot_icon=nb&tool_hint_max_length=120",
+      "/api/settings/update?model_preset=default&model=openrouter%2Ftest&provider=openrouter&timezone=Asia%2FShanghai&bot_name=hiperone&bot_icon=nb&tool_hint_max_length=120",
       expect.objectContaining({
         headers: { Authorization: "Bearer tok" },
       }),
@@ -199,7 +199,7 @@ describe("webui API helpers", () => {
           },
           {
             command: "/restart",
-            title: "Restart nanobot",
+            title: "Restart hiperone",
             description: "Restart the bot process.",
             icon: "rotate-cw",
           },

@@ -238,7 +238,7 @@ describe("ThreadShell", () => {
           client,
           <ThreadShell
             session={null}
-            title="nanobot"
+            title="hiperone"
             onToggleSidebar={() => {}}
             onGoHome={() => {}}
             onNewChat={onNewChat}
@@ -263,7 +263,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="hiperone"
           onToggleSidebar={() => {}}
           onGoHome={() => {}}
           onNewChat={onNewChat}
@@ -298,7 +298,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="hiperone"
           onToggleSidebar={() => {}}
           onCreateChat={onCreateChat}
         />,
@@ -565,7 +565,7 @@ describe("ThreadShell", () => {
           client,
           <ThreadShell
             session={null}
-            title="nanobot"
+            title="hiperone"
             onToggleSidebar={() => {}}
             onNewChat={() => {}}
           />,
@@ -728,7 +728,7 @@ describe("ThreadShell", () => {
           client,
           <ThreadShell
             session={null}
-            title="nanobot"
+            title="hiperone"
             onToggleSidebar={() => {}}
             onNewChat={() => {}}
           />,
@@ -796,7 +796,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="hiperone"
           onToggleSidebar={() => {}}
           onNewChat={() => {}}
         />,
@@ -825,7 +825,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="hiperone"
           onToggleSidebar={() => {}}
           onNewChat={() => {}}
         />,
