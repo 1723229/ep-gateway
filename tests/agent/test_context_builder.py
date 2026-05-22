@@ -203,7 +203,7 @@ class TestBundledToolContract:
 
     def test_tool_contract_is_injected_without_workspace_file(self, tmp_path):
         builder = _builder(tmp_path)
-        prompt = builder.build_system_prompt()
+        prompt = asyncio.run(builder.build_system_prompt())
 
         assert "# Tool Usage Notes" in prompt
         assert "## General Tool Contract" in prompt

@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import dataclasses
-import inspect
 import os
 import time
 from contextlib import AsyncExitStack, nullcontext, suppress
@@ -707,7 +706,7 @@ class AgentLoop:
         pending_summary: str | None,
     ) -> list[dict[str, Any]]:
         """Build the initial message list for the LLM turn."""
-        messages = self.context.build_messages(
+        return await self.context.build_messages(
             history=history,
             current_message=image_generation_prompt(msg.content, msg.metadata),
             media=msg.media if msg.media else None,
@@ -718,9 +717,6 @@ class AgentLoop:
             session_summary=pending_summary,
             session_metadata=session.metadata,
         )
-        if inspect.isawaitable(messages):
-            return await messages
-        return messages
 
     async def _dispatch_command_inline(
         self,
@@ -1191,7 +1187,7 @@ class AgentLoop:
         history = session.get_history(**_hist_kwargs)
         current_role = "assistant" if is_subagent else "user"
 
-        messages = self.context.build_messages(
+        messages = await self.context.build_messages(
             history=history,
             current_message="" if is_subagent else msg.content,
             channel=channel,
@@ -1202,8 +1198,6 @@ class AgentLoop:
             session_summary=pending,
             session_metadata=session.metadata,
         )
-        if inspect.isawaitable(messages):
-            messages = await messages
         t_wall = time.time()
         final_content, _, all_msgs, stop_reason, _ = await self._run_agent_loop(
             messages, session=session, channel=channel, chat_id=chat_id,

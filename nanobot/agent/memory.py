@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json
 import os
 import re
@@ -619,7 +618,7 @@ class Consolidator:
         # Include archived summary in estimation so the budget accounts for it.
         meta = session.metadata.get("_last_summary")
         summary = meta.get("text") if isinstance(meta, dict) else (meta if isinstance(meta, str) else None)
-        probe_messages = self._build_messages(
+        probe_messages = await self._build_messages(
             history=history,
             current_message="[token-probe]",
             channel=channel,
@@ -628,8 +627,6 @@ class Consolidator:
             session_summary=summary,
             session_metadata=session.metadata,
         )
-        if inspect.isawaitable(probe_messages):
-            probe_messages = await probe_messages
         return estimate_prompt_tokens_chain(
             self.provider,
             self.model,
@@ -721,10 +718,7 @@ class Consolidator:
                 replay_max_messages,
             )
             try:
-                estimate = self.estimate_session_prompt_tokens(session)
-                if inspect.isawaitable(estimate):
-                    estimate = await estimate
-                estimated, source = estimate
+                estimated, source = await self.estimate_session_prompt_tokens(session)
             except Exception:
                 logger.exception("Token estimation failed for {}", session.key)
                 estimated, source = 0, "error"
@@ -787,10 +781,7 @@ class Consolidator:
                     break
 
                 try:
-                    estimate = self.estimate_session_prompt_tokens(session)
-                    if inspect.isawaitable(estimate):
-                        estimate = await estimate
-                    estimated, source = estimate
+                    estimated, source = await self.estimate_session_prompt_tokens(session)
                 except Exception:
                     logger.exception("Token estimation failed for {}", session.key)
                     estimated, source = 0, "error"
