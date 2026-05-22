@@ -49,7 +49,7 @@ BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (
     ),
     BuiltinCommandSpec(
         "/restart",
-        "Restart nanobot",
+        "Restart hiperone",
         "Restart the bot process in place.",
         "rotate-cw",
     ),

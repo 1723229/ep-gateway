@@ -71,7 +71,7 @@ export function Sidebar(props: SidebarProps) {
           <source srcSet="/brand/nanobot_logo.webp" type="image/webp" />
           <img
             src="/brand/nanobot_logo.png"
-            alt="nanobot"
+            alt="hiperone"
             className="h-6 w-auto select-none object-contain opacity-95"
             draggable={false}
           />

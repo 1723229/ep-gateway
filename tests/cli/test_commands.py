@@ -72,7 +72,7 @@ def test_onboard_fresh_install(mock_paths):
     assert result.exit_code == 0
     assert "Created config" in result.stdout
     assert "Created workspace" in result.stdout
-    assert "HiperOne is ready" in result.stdout
+    assert "hiperone is ready" in result.stdout
     assert config_file.exists()
     assert (workspace_dir / "AGENTS.md").exists()
     assert (workspace_dir / "memory" / "MEMORY.md").exists()
@@ -146,7 +146,7 @@ def test_root_help_lists_web_and_admin_commands():
     assert result.exit_code == 0
     stripped_output = _strip_ansi(result.stdout)
     assert "gateway" in stripped_output
-    assert "nanobot gateway" in stripped_output
+    assert "hiperone - Personal AI Assistant" in stripped_output
     assert "admin" in stripped_output
     assert "admin HTTP interface" in stripped_output
 

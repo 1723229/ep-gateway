@@ -1,29 +1,29 @@
 {
   "app": {
-    "brand": "nanobot",
+    "brand": "hiperone",
     "loading": {
-      "connecting": "Menghubungkan ke nanobot…",
-      "boot": "Memuat nanobot…"
+      "connecting": "Menghubungkan ke hiperone…",
+      "boot": "Memuat hiperone…"
     },
     "error": {
-      "title": "Tidak dapat menjangkau nanobot",
+      "title": "Tidak dapat menjangkau hiperone",
       "gatewayHint": "Pastikan gateway sedang berjalan (`nanobot gateway`) dan halaman ini dibuka pada mesin yang sama."
     },
     "system": {
       "section": "Sistem",
-      "restartHint": "Mulai ulang nanobot untuk menerapkan perubahan runtime.",
-      "restart": "Mulai ulang nanobot",
+      "restartHint": "Mulai ulang hiperone untuk menerapkan perubahan runtime.",
+      "restart": "Mulai ulang hiperone",
       "restarting": "Memulai ulang..."
     },
     "restart": {
       "completed": "Mulai ulang selesai dalam {{seconds}} dtk."
     },
     "documentTitle": {
-      "base": "nanobot",
-      "chat": "{{title}} · nanobot"
+      "base": "hiperone",
+      "chat": "{{title}} · hiperone"
     },
     "meta": {
-      "description": "UI web nanobot — ngobrol dengan workspace nanobot Anda."
+      "description": "UI web hiperone — ngobrol dengan workspace hiperone Anda."
     }
   },
   "sidebar": {
@@ -86,7 +86,7 @@
       "language": "Bahasa",
       "provider": "Penyedia",
       "model": "Model",
-      "restart": "Mulai ulang nanobot",
+      "restart": "Mulai ulang hiperone",
       "configPath": "Path konfigurasi",
       "activePreset": "Active preset",
       "gateway": "Gateway",
@@ -119,7 +119,7 @@
       "theme": "Beralih antara tampilan terang dan gelap.",
       "language": "Pilih bahasa yang digunakan WebUI.",
       "provider": "Pilih penyedia untuk permintaan model baru.",
-      "model": "Atur nama model default yang digunakan nanobot.",
+      "model": "Atur nama model default yang digunakan hiperone.",
       "configPath": "File konfigurasi gateway yang sedang digunakan.",
       "selectedPreset": "Named presets are read-only here; edit them in config.json.",
       "presetModel": "Switch to Default to edit model and provider from the WebUI.",
@@ -156,7 +156,7 @@
       "loading": "Memuat pengaturan...",
       "loadError": "Tidak dapat memuat pengaturan",
       "unsaved": "Ada perubahan yang belum disimpan.",
-      "savedRestart": "Tersimpan. Mulai ulang nanobot untuk menerapkan."
+      "savedRestart": "Tersimpan. Mulai ulang hiperone untuk menerapkan."
     },
     "actions": {
       "save": "Simpan",
@@ -166,7 +166,7 @@
       "openDocs": "Open docs"
     },
     "byok": {
-      "description": "Gunakan kunci provider Anda sendiri. Nanobot membaca nilai ini dari config saat ini, dan hanya provider yang sudah dikonfigurasi yang bisa dipilih di Umum.",
+      "description": "Gunakan kunci provider Anda sendiri. Hiperone membaca nilai ini dari config saat ini, dan hanya provider yang sudah dikonfigurasi yang bisa dipilih di Umum.",
       "configured": "Terkonfigurasi",
       "notConfigured": "Belum dikonfigurasi",
       "configuredSection": "Terkonfigurasi",
@@ -299,7 +299,7 @@
       "imageQuickActions": {
         "icon": {
           "title": "Desain ikon aplikasi",
-          "prompt": "Buat ikon aplikasi 1:1 yang bersih untuk nanobot: robot ramah, gaya vektor sederhana, palet biru dan putih lembut, tanpa teks."
+          "prompt": "Buat ikon aplikasi 1:1 yang bersih untuk hiperone: robot ramah, gaya vektor sederhana, palet biru dan putih lembut, tanpa teks."
         },
         "sticker": {
           "title": "Buat stiker",
@@ -383,7 +383,7 @@
             "description": "Batalkan giliran agent yang sedang aktif di chat ini."
           },
           "restart": {
-            "title": "Mulai ulang nanobot",
+            "title": "Mulai ulang hiperone",
             "description": "Mulai ulang proses bot di tempat."
           },
           "status": {
