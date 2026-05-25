@@ -1,12 +1,12 @@
 {
   "app": {
-    "brand": "hiperone",
+    "brand": "nanobot",
     "loading": {
-      "connecting": "Connecting to hiperone…",
-      "boot": "Loading hiperone…"
+      "connecting": "Connecting to nanobot…",
+      "boot": "Loading nanobot…"
     },
     "error": {
-      "title": "Couldn't reach hiperone",
+      "title": "Couldn't reach nanobot",
       "gatewayHint": "Make sure the gateway is running (`nanobot gateway`) and that this page is open on the same machine."
     },
     "auth": {
@@ -23,19 +23,19 @@
     },
     "system": {
       "section": "System",
-      "restartHint": "Restart hiperone to apply runtime changes.",
-      "restart": "Restart hiperone",
+      "restartHint": "Restart nanobot to apply runtime changes.",
+      "restart": "Restart nanobot",
       "restarting": "Restarting..."
     },
     "restart": {
       "completed": "Restart completed in {{seconds}}s."
     },
     "documentTitle": {
-      "base": "hiperone",
-      "chat": "{{title}} · hiperone"
+      "base": "nanobot",
+      "chat": "{{title}} · nanobot"
     },
     "meta": {
-      "description": "hiperone web UI — chat with your hiperone workspace."
+      "description": "nanobot web UI — chat with your nanobot workspace."
     }
   },
   "sidebar": {
@@ -80,6 +80,8 @@
       "providers": "Providers",
       "image": "Image",
       "web": "Web",
+      "cliApps": "CLI Apps",
+      "mcp": "MCP",
       "runtime": "Runtime",
       "advanced": "Advanced"
     },
@@ -94,27 +96,39 @@
       "imageDefaults": "Defaults",
       "webSearch": "Web search",
       "webBehavior": "Behavior",
+      "cliApps": "CLI Apps",
+      "mcp": "MCP",
       "identity": "Identity",
       "safety": "Safety",
       "capabilities": "Capabilities",
       "integrations": "Integrations"
+    },
+    "models": {
+      "selectModel": "Select model",
+      "addConfiguration": "Add configuration",
+      "newConfiguration": "New model configuration",
+      "newConfigurationHelp": "Save a provider and model as a one-click option.",
+      "configurationName": "Name",
+      "configurationNamePlaceholder": "Fast writing"
     },
     "rows": {
       "theme": "Theme",
       "language": "Language",
       "provider": "Provider",
       "model": "Model",
-      "restart": "Restart hiperone",
+      "restart": "Restart nanobot",
       "configPath": "Config path",
       "activePreset": "Active preset",
       "gateway": "Gateway",
       "restartState": "Restart state",
       "pendingChanges": "Pending changes",
+      "currentModel": "Current model",
       "selectedPreset": "Selected preset",
       "presetModel": "Preset model",
       "density": "Density",
       "activityMode": "Activity detail",
       "codeWrap": "Code wrapping",
+      "brandLogos": "Brand logos",
       "maxResults": "Max results",
       "timeout": "Timeout",
       "jinaReader": "Jina reader",
@@ -141,19 +155,25 @@
       "ssrfWhitelist": "SSRF whitelist",
       "mcpServers": "MCP servers",
       "pathAppend": "PATH append",
+      "cliAppsCatalog": "Catalog",
+      "cliAppsFilter": "Filter",
       "configurationDocs": "Configuration docs"
     },
     "help": {
       "theme": "Switch between light and dark appearance.",
       "language": "Choose the language used by the WebUI.",
       "provider": "Select the provider that should serve new model requests.",
-      "model": "Set the default model name used by hiperone.",
+      "model": "Set the default model name used by nanobot.",
       "configPath": "The gateway configuration file currently in use.",
+      "currentModel": "Choose the model nanobot uses for new replies.",
+      "selectedModelProvider": "Set by the selected model.",
+      "selectedModelValue": "Set by the selected model.",
       "selectedPreset": "Named presets are read-only here; edit them in config.json.",
       "presetModel": "Switch to Default to edit model and provider from the WebUI.",
       "density": "Stored only in this browser.",
       "activityMode": "Choose how much agent activity chrome to show by default.",
       "codeWrap": "Keep long code lines readable on smaller screens.",
+      "brandLogos": "Show third-party provider and CLI logos in Settings.",
       "maxResults": "Results returned by each web_search call.",
       "timeout": "Seconds before a search provider request times out.",
       "jinaReader": "Use Jina Reader for web_fetch when available.",
@@ -168,7 +188,98 @@
       "botIcon": "Short emoji or text shown beside the bot name.",
       "timezone": "IANA timezone used by runtime context and schedules.",
       "toolHintMaxLength": "Maximum characters shown in tool progress hints.",
+      "cliAppsCatalog": "Install only the app-specific CLI adapters nanobot can run locally; desktop apps stay untouched.",
+      "cliAppsFilter": "Search by app, category, or capability.",
       "advancedReadOnly": "Advanced safety controls are read-only in WebUI. Edit config.json intentionally when needed."
+    },
+    "timezone": {
+      "select": "Select timezone",
+      "search": "Search timezone",
+      "empty": "No matching timezones."
+    },
+    "cliApps": {
+      "allCategories": "All categories",
+      "availableCount": "{{count}} apps",
+      "installedCount": "{{count}} CLIs installed",
+      "summary": "{{installed}} of {{total}} CLIs installed",
+      "filterAll": "All",
+      "filterInstalled": "Installed CLIs",
+      "filterNotInstalled": "Not installed",
+      "searchPlaceholder": "Search CLIs",
+      "loading": "Loading CLI Apps...",
+      "empty": "No CLI Apps match this filter.",
+      "statusInstalled": "CLI installed",
+      "statusMissing": "Missing",
+      "statusAvailable": "Available",
+      "statusUnsupported": "Unsupported",
+      "statusNotInstalled": "CLI not installed",
+      "requires": "Requires",
+      "test": "Test CLI",
+      "update": "Update CLI",
+      "uninstall": "Uninstall CLI",
+      "install": "Install CLI",
+      "readyTitle": "@{{name}} is ready",
+      "readyStatus": "Ready",
+      "readyTry": "Try @{{name}}",
+      "readyCopied": "Copied",
+      "readyPrompt": "Use @{{name}} to inspect what this CLI can do.",
+      "openChat": "Open chat",
+      "unsupported": "Unsupported",
+      "unavailable": "Unavailable",
+      "noDescription": "No description available."
+    },
+    "mcp": {
+      "allCategories": "All categories",
+      "summary": "{{installed}} of {{total}} presets enabled",
+      "filterAll": "All",
+      "filterInstalled": "Enabled",
+      "filterNotInstalled": "Not enabled",
+      "searchPlaceholder": "Search MCP presets",
+      "moreOptions": "More MCP options",
+      "moreOptionsSubtitle": "Add a custom server or import mcp.json.",
+      "customTitle": "Custom MCP",
+      "customSubtitle": "Add any stdio, HTTP, or SSE MCP server.",
+      "customAction": "Custom",
+      "importAction": "Import",
+      "serverName": "Server name",
+      "serverUrl": "URL",
+      "transport": "Transport",
+      "command": "Command",
+      "args": "Args JSON",
+      "headers": "Headers JSON",
+      "env": "Env JSON",
+      "timeout": "Tool timeout",
+      "advancedOptions": "Advanced options",
+      "hideAdvanced": "Hide advanced",
+      "saveCustom": "Save MCP",
+      "configImport": "Import mcp.json",
+      "importConfig": "Import",
+      "restartRequired": "Restart nanobot to connect updated MCP tools.",
+      "toolsFound": "{{count}} tools",
+      "loading": "Loading MCP presets...",
+      "empty": "No MCP presets match this filter.",
+      "openDocs": "Open docs",
+      "test": "Test",
+      "remove": "Remove",
+      "enable": "Enable",
+      "enabled": "Enabled",
+      "setup": "Connect",
+      "configure": "Connect",
+      "connectTitle": "Connect {{name}}",
+      "connectHint": "Add the key from your account settings.",
+      "saveAndEnable": "Save and enable",
+      "updateSetup": "Update setup",
+      "configured": "configured",
+      "keepExisting": "Leave blank to keep existing",
+      "statusConfigured": "Configured",
+      "statusMissingCredentials": "Needs key",
+      "statusMissingDependency": "Needs dependency",
+      "statusComingSoon": "Coming soon",
+      "statusNotInstalled": "Not enabled",
+      "toolScope": "Tools",
+      "allTools": "All",
+      "noTools": "None",
+      "testForTools": "Run Test to inspect and choose individual tools."
     },
     "values": {
       "light": "Light",
@@ -192,7 +303,7 @@
       "loadError": "Could not load settings",
       "unsaved": "Unsaved changes.",
       "upToDate": "Up to date.",
-      "savedRestart": "Saved. Restart hiperone to apply.",
+      "savedRestart": "Saved. Restart nanobot to apply.",
       "restartAfterSaving": "Save changes, then restart when ready.",
       "savedRestartApply": "Saved. Restart when ready.",
       "imageProviderRestart": "Image provider changes saved. Restart when ready."
@@ -205,7 +316,7 @@
       "openDocs": "Open docs"
     },
     "byok": {
-      "description": "Bring your own provider keys. Hiperone reads these values from the current config and only configured providers can be selected in General.",
+      "description": "Bring your own provider keys. Nanobot reads these values from the current config and only configured providers can be selected in General.",
       "configured": "Configured",
       "notConfigured": "Not configured",
       "configuredSection": "Configured",
@@ -257,7 +368,11 @@
     },
     "providers": {
       "searchPlaceholder": "Search providers",
-      "noMatches": "No providers match this search."
+      "noMatches": "No providers match this search.",
+      "saveProvider": "Save provider"
+    },
+    "legal": {
+      "thirdPartyBrands": "Product names, logos, and brands are property of their respective owners. Use is for identification only and does not imply endorsement."
     },
     "image": {
       "selectProvider": "Select provider",
@@ -346,7 +461,7 @@
       "imageQuickActions": {
         "icon": {
           "title": "Design an app icon",
-          "prompt": "Generate a clean 1:1 app icon for hiperone: friendly robot, simple vector style, soft blue and white palette, no text."
+          "prompt": "Generate a clean 1:1 app icon for nanobot: friendly robot, simple vector style, soft blue and white palette, no text."
         },
         "sticker": {
           "title": "Make a sticker",
@@ -419,6 +534,16 @@
         "navigateHint": "↑↓ Navigate",
         "selectHint": "Enter/Tab Select",
         "closeHint": "Esc Close",
+        "badges": {
+          "current": "Current",
+          "recent": "Recent"
+        },
+        "details": {
+          "goalActive": "Goal is running",
+          "goalReady": "Start a sustained objective",
+          "history": "Show recent messages",
+          "stopRunning": "Running now"
+        },
         "commands": {
           "new": {
             "title": "New chat",
@@ -429,12 +554,16 @@
             "description": "Cancel the active agent turn for this chat."
           },
           "restart": {
-            "title": "Restart hiperone",
+            "title": "Restart nanobot",
             "description": "Restart the bot process in place."
           },
           "status": {
             "title": "Show status",
             "description": "Display runtime, provider, and channel status."
+          },
+          "model": {
+            "title": "Model",
+            "description": "Show or switch the active model preset."
           },
           "history": {
             "title": "Show conversation history",
@@ -459,8 +588,22 @@
           "help": {
             "title": "Show help",
             "description": "List available slash commands."
+          },
+          "pairing": {
+            "title": "Pairing",
+            "description": "Manage pairing requests."
           }
         }
+      },
+      "mentions": {
+        "ariaLabel": "Apps and MCP",
+        "label": "Plugins",
+        "cliGroup": "CLI Apps",
+        "mcpGroup": "MCP servers",
+        "cliBadge": "CLI",
+        "mcpBadge": "MCP",
+        "cliDescription": "Use @{{name}} as a local CLI app",
+        "mcpDescription": "Use @{{name}} as an MCP server"
       },
       "encoding": "Encoding…",
       "remove": "Remove attachment",
@@ -493,6 +636,18 @@
     "agentActivityToolsOnly": "{{tools}} tool calls",
     "agentActivityLiveSummary": "Working… · {{reasoning}} steps · {{tools}} tool calls",
     "agentActivityLiveToolsOnly": "Working… · {{tools}} tool calls",
+    "activityThinkingFor": "Thinking for {{duration}}",
+    "activityThought": "Thought",
+    "activityThoughtFor": "Thought for {{duration}}",
+    "cliActivityRunningOne": "Using @{{name}}",
+    "cliActivityRanOne": "Used @{{name}}",
+    "cliActivityFailedOne": "Failed @{{name}}",
+    "cliActivityRunningMany": "Using {{count}} CLI apps",
+    "cliActivityRanMany": "Used {{count}} CLI apps",
+    "cliActivityFailedMany": "{{count}} CLI apps failed",
+    "cliRunRunning": "Using",
+    "cliRunRan": "Used",
+    "cliRunFailed": "Failed",
     "imageAttachment": "Image attachment",
     "copyReply": "Copy reply",
     "copiedReply": "Copied reply",

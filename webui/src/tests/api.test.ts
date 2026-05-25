@@ -1,13 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createModelConfiguration,
   deleteSession,
+  fetchCliApps,
+  fetchMcpPresets,
   fetchSidebarState,
   fetchWebuiThread,
+  importMcpConfig,
   listSessions,
   listSlashCommands,
+  runCliAppAction,
+  runMcpPresetAction,
+  saveCustomMcpServer,
   updateSidebarState,
   updateImageGenerationSettings,
+  updateMcpServerTools,
   updateProviderSettings,
   updateSettings,
   updateWebSearchSettings,
@@ -53,13 +61,28 @@ describe("webui API helpers", () => {
       model: "openrouter/test",
       provider: "openrouter",
       timezone: "Asia/Shanghai",
-      botName: "hiperone",
+      botName: "nanobot",
       botIcon: "nb",
       toolHintMaxLength: 120,
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/settings/update?model_preset=default&model=openrouter%2Ftest&provider=openrouter&timezone=Asia%2FShanghai&bot_name=hiperone&bot_icon=nb&tool_hint_max_length=120",
+      "/api/settings/update?model_preset=default&model=openrouter%2Ftest&provider=openrouter&timezone=Asia%2FShanghai&bot_name=nanobot&bot_icon=nb&tool_hint_max_length=120",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer tok" },
+      }),
+    );
+  });
+
+  it("serializes model configuration creation", async () => {
+    await createModelConfiguration("tok", {
+      label: "Fast writing",
+      provider: "openai",
+      model: "openai/gpt-4.1-mini",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/model-configurations/create?label=Fast+writing&provider=openai&model=openai%2Fgpt-4.1-mini",
       expect.objectContaining({
         headers: { Authorization: "Bearer tok" },
       }),
@@ -112,6 +135,118 @@ describe("webui API helpers", () => {
       "/api/settings/image-generation/update?enabled=true&provider=openrouter&model=openai%2Fgpt-5.4-image-2&default_aspect_ratio=16%3A9&default_image_size=2K&max_images_per_turn=3",
       expect.objectContaining({
         headers: { Authorization: "Bearer tok" },
+      }),
+    );
+  });
+
+  it("reads CLI Apps catalog and serializes actions", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        apps: [],
+        installed_count: 0,
+        catalog_updated_at: "2026-04-18",
+      }),
+    } as Response);
+
+    await expect(fetchCliApps("tok")).resolves.toMatchObject({ apps: [] });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/cli-apps",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer tok" },
+      }),
+    );
+
+    await runCliAppAction("tok", "install", "gimp");
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/cli-apps/install?name=gimp",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer tok" },
+      }),
+    );
+  });
+
+  it("reads MCP presets and serializes actions", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        presets: [],
+        installed_count: 0,
+      }),
+    } as Response);
+
+    await expect(fetchMcpPresets("tok")).resolves.toMatchObject({ presets: [] });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/mcp-presets",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer tok" },
+      }),
+    );
+
+    await runMcpPresetAction("tok", "enable", "browserbase", {
+      browserbase_api_key: "bb_live_test",
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/mcp-presets/enable?name=browserbase",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer tok",
+          "X-Nanobot-MCP-Values": JSON.stringify({
+            browserbase_api_key: "bb_live_test",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("serializes custom MCP, mcp.json import, and tool allowlist actions", async () => {
+    await saveCustomMcpServer("tok", {
+      name: "docs",
+      transport: "stdio",
+      command: "npx",
+      args: '["-y","docs-mcp"]',
+      env: '{"API_KEY":"secret"}',
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/mcp-presets/custom",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer tok",
+          "X-Nanobot-MCP-Values": JSON.stringify({
+            name: "docs",
+            transport: "stdio",
+            command: "npx",
+            args: '["-y","docs-mcp"]',
+            env: '{"API_KEY":"secret"}',
+          }),
+        }),
+      }),
+    );
+
+    await importMcpConfig("tok", '{"mcpServers":{"docs":{"command":"npx"}}}');
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/mcp-presets/import",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer tok",
+          "X-Nanobot-MCP-Values": JSON.stringify({
+            config: '{"mcpServers":{"docs":{"command":"npx"}}}',
+          }),
+        }),
+      }),
+    );
+
+    await updateMcpServerTools("tok", "docs", ["search", "fetch"]);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/settings/mcp-presets/tools",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer tok",
+          "X-Nanobot-MCP-Values": JSON.stringify({
+            name: "docs",
+            enabled_tools: ["search", "fetch"],
+          }),
+        }),
       }),
     );
   });
@@ -199,7 +334,7 @@ describe("webui API helpers", () => {
           },
           {
             command: "/restart",
-            title: "Restart hiperone",
+            title: "Restart nanobot",
             description: "Restart the bot process.",
             icon: "rotate-cw",
           },

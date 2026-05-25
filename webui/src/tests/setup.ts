@@ -3,29 +3,6 @@ import { beforeEach } from "vitest";
 
 import i18n from "@/i18n";
 
-if (typeof globalThis.localStorage?.setItem !== "function") {
-  const store = new Map<string, string>();
-  Object.defineProperty(globalThis, "localStorage", {
-    value: {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, String(value));
-      },
-      removeItem: (key: string) => {
-        store.delete(key);
-      },
-      clear: () => {
-        store.clear();
-      },
-      key: (index: number) => Array.from(store.keys())[index] ?? null,
-      get length() {
-        return store.size;
-      },
-    },
-    configurable: true,
-  });
-}
-
 // happy-dom doesn't ship with ``crypto.randomUUID``; shim a tiny v4-ish helper.
 if (!("randomUUID" in globalThis.crypto)) {
   Object.defineProperty(globalThis.crypto, "randomUUID", {
@@ -42,6 +19,6 @@ if (!("randomUUID" in globalThis.crypto)) {
 beforeEach(async () => {
   await i18n.changeLanguage("en");
   document.documentElement.lang = "en";
-  document.title = "hiperone";
+  document.title = "nanobot";
   localStorage.setItem("nanobot.locale", "en");
 });

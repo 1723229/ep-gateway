@@ -10,7 +10,7 @@ For the project overview, install guide, and general docs map, see the root
 
 ## Just want to use the WebUI?
 
-If you installed nanobot via `pip install nanobot-ai`, the WebUI is **already bundled** in the wheel. Enable the WebSocket channel in `~/.hiperone/config.json` and run `nanobot gateway` — see the root [`README.md`](../README.md#-webui) for the 3-step setup. You do **not** need anything in this directory.
+If you installed nanobot via `pip install nanobot-ai`, the WebUI is **already bundled** in the wheel. Enable the WebSocket channel in `~/.nanobot/config.json` and run `nanobot gateway` — see the root [`README.md`](../README.md#-webui) for the 3-step setup. You do **not** need anything in this directory.
 
 This `webui/` tree is for people **hacking on the WebUI itself** (UI changes, new components, styling, etc.).
 
@@ -35,7 +35,7 @@ pip install -e .
 
 ### 2. Enable the WebSocket channel
 
-In `~/.hiperone/config.json`:
+In `~/.nanobot/config.json`:
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }
@@ -71,7 +71,7 @@ NANOBOT_API_URL=http://127.0.0.1:9000 bun run dev
 
 ### Access from another device (LAN)
 
-To use the WebUI from another device on the same network, set `host` to `"0.0.0.0"` and configure a `token` or `tokenIssueSecret` in `~/.hiperone/config.json`:
+To use the WebUI from another device on the same network, set `host` to `"0.0.0.0"` and configure a `token` or `tokenIssueSecret` in `~/.nanobot/config.json`:
 
 ```json
 {
