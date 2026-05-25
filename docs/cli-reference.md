@@ -2,7 +2,7 @@
 
 | Command | Description |
 |---------|-------------|
-| `nanobot onboard` | Initialize config & workspace at `~/.nanobot/` |
+| `nanobot onboard` | Initialize config & workspace at `~/.hiperone/` |
 | `nanobot onboard --wizard` | Launch the interactive onboarding wizard |
 | `nanobot onboard -c <config> -w <workspace>` | Initialize or refresh a specific instance config and workspace |
 | `nanobot agent -m "..."` | Chat with the agent |
