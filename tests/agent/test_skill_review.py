@@ -109,6 +109,26 @@ def test_review_respects_model_override(tmp_path: Path) -> None:
     assert service._model == "gpt-4o-mini"
 
 
+def test_review_set_provider_updates_model_without_override(tmp_path: Path) -> None:
+    service, _, _ = _make_review_service(tmp_path)
+    provider = MagicMock()
+
+    service.set_provider(provider, "new-model")
+
+    assert service._provider is provider
+    assert service._model == "new-model"
+
+
+def test_review_set_provider_preserves_model_override(tmp_path: Path) -> None:
+    service, _, _ = _make_review_service(tmp_path, review_model_override="review-model")
+    provider = MagicMock()
+
+    service.set_provider(provider, "new-main-model")
+
+    assert service._provider is provider
+    assert service._model == "review-model"
+
+
 def test_review_uses_default_model_when_no_override(tmp_path: Path) -> None:
     service, _, _ = _make_review_service(tmp_path)
     assert service._model == "test-model"

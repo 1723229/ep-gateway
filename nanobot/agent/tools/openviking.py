@@ -30,7 +30,10 @@ class _OVTool(Tool):
 
     async def _client(self) -> VikingClient:
         if _OVTool._shared_client is None:
-            _OVTool._shared_client = await VikingClient.from_config()
+            if self._ov_config is not None and hasattr(VikingClient, "from_openviking_config"):
+                _OVTool._shared_client = await VikingClient.from_openviking_config(self._ov_config)
+            else:
+                _OVTool._shared_client = await VikingClient.from_config()
         return _OVTool._shared_client
 
     @classmethod

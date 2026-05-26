@@ -45,6 +45,12 @@ class SkillReviewService:
         self._config = config
         # Don't create a shared runner; instantiate a fresh one per review
 
+    def set_provider(self, provider: LLMProvider, model: str) -> None:
+        """Update the review runtime after the main agent changes model/provider."""
+        self._provider = provider
+        if not self._config.review_model_override:
+            self._model = model
+
     def _build_tools(
         self,
         *,

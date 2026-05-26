@@ -426,6 +426,9 @@ class AgentLoop:
         self.subagents.set_provider(provider, model)
         self.consolidator.set_provider(provider, model, context_window_tokens)
         self.dream.set_provider(provider, model)
+        skill_tracker = getattr(self, "_skill_tracker", None)
+        if skill_tracker is not None:
+            skill_tracker.set_provider(provider, model)
         self._provider_signature = snapshot.signature
         if publish_update and self._runtime_model_publisher is not None:
             self._runtime_model_publisher(

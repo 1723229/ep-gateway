@@ -144,6 +144,38 @@ async def test_close_mcp_closes_openviking_client(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_openviking_tool_fallback_uses_runtime_config(monkeypatch) -> None:
+    from nanobot.agent.tools.openviking import OVReadTool, _OVTool
+
+    seen: dict[str, object] = {}
+
+    class FakeVikingClient:
+        @classmethod
+        async def from_openviking_config(cls, ov_config):
+            seen["ov_config"] = ov_config
+            return cls()
+
+        @classmethod
+        async def from_config(cls):
+            seen["from_config"] = True
+            return cls()
+
+        async def read_content(self, uri: str, level: str = "abstract") -> str:
+            return f"{uri}:{level}"
+
+    monkeypatch.setattr("nanobot.agent.tools.openviking.VikingClient", FakeVikingClient)
+    _OVTool._shared_client = None
+    ov_config = object()
+
+    result = await OVReadTool(ov_config=ov_config).execute("viking://doc", level="read")
+
+    assert result == "viking://doc:read"
+    assert seen["ov_config"] is ov_config
+    assert "from_config" not in seen
+    _OVTool._shared_client = None
+
+
+@pytest.mark.asyncio
 async def test_generate_webui_title_only_for_marked_webui_sessions(tmp_path: Path) -> None:
     loop = _make_full_loop(tmp_path)
     loop.provider.chat_with_retry = AsyncMock(

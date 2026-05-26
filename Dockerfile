@@ -64,8 +64,6 @@ RUN apt-get update && \
 
 RUN mkdir -p /root/.hiperone
 
-RUN uv tool install minimax-coding-plan-mcp
-
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 

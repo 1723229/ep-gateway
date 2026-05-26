@@ -103,6 +103,11 @@ class SkillReviewTracker:
     def active(self) -> bool:
         return self._review is not None
 
+    def set_provider(self, provider: LLMProvider, model: str) -> None:
+        """Propagate runtime model/provider changes to the review service."""
+        if self._review is not None and hasattr(self._review, "set_provider"):
+            self._review.set_provider(provider, model)
+
     async def maybe_review(
         self,
         all_msgs: list[dict[str, Any]],
