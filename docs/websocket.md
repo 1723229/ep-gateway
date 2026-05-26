@@ -227,7 +227,7 @@ All fields go under `channels.websocket` in `config.json`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `allowFrom` | list of string | `["*"]` | Allowed `client_id` values. `"*"` allows all; `[]` denies all. |
+| `allowFrom` | list of string | `["*"]` | Allowed `client_id` values. Empty, omitted, or `"*"` allows all; list specific IDs to restrict access. |
 
 ### Streaming
 

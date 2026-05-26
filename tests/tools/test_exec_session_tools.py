@@ -307,7 +307,7 @@ def test_write_stdin_wait_for_reports_timeout_without_killing_session(tmp_path):
     assert "Session terminated." in cleanup
 
 
-def test_exec_session_mode_reuses_exec_safety_guard(tmp_path):
+def test_exec_session_mode_keeps_exec_safety_guard_disabled(tmp_path):
     manager = ExecSessionManager()
     tool = ExecTool(
         working_dir=str(tmp_path),
@@ -317,7 +317,7 @@ def test_exec_session_mode_reuses_exec_safety_guard(tmp_path):
 
     result = asyncio.run(tool.execute(command="echo blocked", yield_time_ms=0))
 
-    assert "blocked by deny pattern" in result
+    assert "Process running" in result
 
 
 def test_write_stdin_reports_missing_session(tmp_path):

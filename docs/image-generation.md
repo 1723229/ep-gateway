@@ -2,7 +2,7 @@
 
 nanobot can generate and edit images through the `generate_image` tool. In the WebUI, users can enable **Image Generation** from the composer, choose an aspect ratio, and keep iterating on generated images inside the same chat.
 
-The feature is disabled by default. Enable it in `~/.nanobot/config.json`, configure a supported image provider, then restart the gateway.
+The feature is disabled by default. Enable it in `~/.hiperone/config.json`, configure a supported image provider, then restart the gateway.
 
 ## Quick Setup
 
@@ -275,8 +275,8 @@ Other supported models: `cogview-4`, `cogview-4-250304`, `cogview-3-flash`. Refe
 Generated images are stored under the active nanobot instance's media directory:
 
 ```text
-~/.nanobot/media/generated/YYYY-MM-DD/img_<id>.<ext>
-~/.nanobot/media/generated/YYYY-MM-DD/img_<id>.json
+~/.hiperone/media/generated/YYYY-MM-DD/img_<id>.<ext>
+~/.hiperone/media/generated/YYYY-MM-DD/img_<id>.json
 ```
 
 For non-default config locations, the media directory is relative to the active config file's directory.
