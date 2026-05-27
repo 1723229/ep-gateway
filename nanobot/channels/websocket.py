@@ -1437,9 +1437,8 @@ class WebSocketChannel(BaseChannel):
                 content = _parse_inbound_payload(raw)
                 if content is None:
                     continue
-                # WebSocket already authenticates at handshake time (token),
-                # so pairing is not applicable. Treat as non-DM to avoid
-                # sending pairing codes to an already-authenticated client.
+                # WebSocket authentication and allowlist checks already happen
+                # at handshake time; raw frames are regular channel messages.
                 await self._handle_message(
                     sender_id=client_id,
                     chat_id=default_chat_id,

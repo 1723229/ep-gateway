@@ -686,7 +686,7 @@ class MatrixChannel(BaseChannel):
         if policy == "open":
             return True
         if policy == "allowlist":
-            return room.room_id in (self.config.group_allow_from or [])
+            return not self.config.group_allow_from or room.room_id in self.config.group_allow_from
         if policy == "mention":
             return self._is_bot_mentioned(event)
         return False

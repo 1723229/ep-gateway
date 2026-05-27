@@ -168,6 +168,28 @@ def test_get_message_content_sync_returns_none_for_non_text_type() -> None:
     assert result is None
 
 
+def test_get_message_content_sync_filters_unsupported_client_placeholder() -> None:
+    channel = _make_feishu_channel()
+    channel._client.im.v1.message.get.return_value = _make_get_message_response(
+        "[image]\n请升级至最新版本客户端，以查看内容\nreal question"
+    )
+
+    result = channel._get_message_content_sync("om_parent")
+
+    assert result == "[Reply to: real question]"
+
+
+def test_get_message_content_sync_returns_none_for_only_unsupported_placeholder() -> None:
+    channel = _make_feishu_channel()
+    channel._client.im.v1.message.get.return_value = _make_get_message_response(
+        "[image]\n请升级至最新版本客户端，以查看内容"
+    )
+
+    result = channel._get_message_content_sync("om_parent")
+
+    assert result is None
+
+
 def test_get_message_content_sync_returns_none_when_empty_text() -> None:
     channel = _make_feishu_channel()
     channel._client.im.v1.message.get.return_value = _make_get_message_response("   ")
@@ -563,7 +585,7 @@ async def test_on_message_audio_publishes_downloaded_path_and_transcription() ->
 
     channel.bus.publish_inbound = capture
     channel._download_and_save_media = AsyncMock(
-        return_value=(r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg", "[audio: voice.ogg]")
+        return_value=(r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg", "[audio: voice.ogg]")
     )
     channel.transcribe_audio = AsyncMock(return_value="hello from voice")
     channel._add_reaction = AsyncMock(return_value=None)
@@ -578,9 +600,9 @@ async def test_on_message_audio_publishes_downloaded_path_and_transcription() ->
     channel._download_and_save_media.assert_awaited_once_with(
         "audio", {"file_key": "audio_key", "duration": 1000}, "om_audio"
     )
-    channel.transcribe_audio.assert_awaited_once_with(r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg")
+    channel.transcribe_audio.assert_awaited_once_with(r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg")
     assert len(captured) == 1
-    assert captured[0].media == [r"C:\\Users\\dodre\\.nanobot\\media\\feishu\\voice.ogg"]
+    assert captured[0].media == [r"C:\\Users\\dodre\\.hiperone\\media\\feishu\\voice.ogg"]
     assert captured[0].content == "[transcription: hello from voice]"
 
 
@@ -605,9 +627,9 @@ async def test_download_and_save_media_returns_absolute_path_in_content(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_session_key_group_with_root_id_is_thread_scoped() -> None:
-    """Group message with root_id gets a thread-scoped session key."""
-    channel = _make_feishu_channel(group_policy="open")
+async def test_session_key_group_with_root_id_uses_default() -> None:
+    """Group message can use group-wide session key when topic isolation is disabled."""
+    channel = _make_feishu_channel(group_policy="open", topic_isolation=False)
     bus_spy = []
     original_publish = channel.bus.publish_inbound
 
@@ -629,13 +651,14 @@ async def test_session_key_group_with_root_id_is_thread_scoped() -> None:
     await channel._on_message(event)
 
     assert len(bus_spy) == 1
-    assert bus_spy[0].session_key == "feishu:oc_abc:om_root123"
+    assert bus_spy[0].session_key_override == "feishu:oc_abc"
+    assert bus_spy[0].session_key == "feishu:oc_abc"
 
 
 @pytest.mark.asyncio
-async def test_session_key_group_no_root_id_uses_message_id() -> None:
-    """Group message without root_id gets session keyed by message_id (per-message session)."""
-    channel = _make_feishu_channel(group_policy="open")
+async def test_session_key_group_no_root_id_uses_default() -> None:
+    """Group message without root_id can use group-wide session key when topic isolation is disabled."""
+    channel = _make_feishu_channel(group_policy="open", topic_isolation=False)
     bus_spy = []
     original_publish = channel.bus.publish_inbound
 
@@ -657,7 +680,8 @@ async def test_session_key_group_no_root_id_uses_message_id() -> None:
     await channel._on_message(event)
 
     assert len(bus_spy) == 1
-    assert bus_spy[0].session_key == "feishu:oc_abc:om_001"
+    assert bus_spy[0].session_key_override == "feishu:oc_abc"
+    assert bus_spy[0].session_key == "feishu:oc_abc"
 
 
 @pytest.mark.asyncio
@@ -911,8 +935,8 @@ def test_on_background_task_done_removes_from_set() -> None:
 
 
 @pytest.mark.asyncio
-async def test_on_message_unauthorized_dm_sends_pairing_code_without_side_effects() -> None:
-    """Unauthorized DM sender gets a pairing code but no media side effects."""
+async def test_on_message_unauthorized_dm_ignored_before_side_effects() -> None:
+    """Unauthorized DM sender is ignored before media side effects."""
     channel = _make_feishu_channel(group_policy="open")
     channel.config.allow_from = ["ou_allowed"]
     channel._add_reaction = AsyncMock()
@@ -931,8 +955,7 @@ async def test_on_message_unauthorized_dm_sends_pairing_code_without_side_effect
     channel._add_reaction.assert_not_awaited()
     channel._download_and_save_media.assert_not_awaited()
     channel.transcribe_audio.assert_not_awaited()
-    # _handle_message is called to issue the pairing code in DMs
-    channel._handle_message.assert_awaited_once()
+    channel._handle_message.assert_not_awaited()
 
 
 @pytest.mark.asyncio

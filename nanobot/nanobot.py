@@ -44,7 +44,7 @@ class Nanobot:
 
         Args:
             config_path: Path to ``config.json``.  Defaults to
-                ``~/.nanobot/config.json``.
+                ``~/.hiperone/config.json``.
             workspace: Override the workspace directory from config.
         """
         from nanobot.config.loader import load_config, resolve_config_env_vars
@@ -100,5 +100,3 @@ class Nanobot:
             tools_used=capture.tools_used,
             messages=capture.messages,
         )
-
-

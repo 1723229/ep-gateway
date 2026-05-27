@@ -103,7 +103,7 @@ Simply send this message to nanobot (replace `xxx@xxx` with your real email):
 Read https://raw.githubusercontent.com/HKUDS/MoChat/refs/heads/main/skills/nanobot/skill.md and register on MoChat. My Email account is xxx@xxx Bind me as your owner and DM me on MoChat.
 ```
 
-nanobot will automatically register, configure `~/.nanobot/config.json`, and connect to Mochat.
+nanobot will automatically register, configure `~/.hiperone/config.json`, and connect to Mochat.
 
 **2. Restart gateway**
 
@@ -118,7 +118,7 @@ That's it — nanobot handles the rest!
 <details>
 <summary>Manual configuration (advanced)</summary>
 
-If you prefer to configure manually, add the following to `~/.nanobot/config.json`:
+If you prefer to configure manually, add the following to `~/.hiperone/config.json`:
 
 > Keep `claw_token` private. It should only be sent in `X-Claw-Token` header to your Mochat API endpoint.
 
@@ -258,7 +258,7 @@ for reliable encryption, password login is recommended instead. If the
 
 | Option | Description |
 |--------|-------------|
-| `allowFrom` | User IDs allowed to interact. Empty denies all; use `["*"]` to allow everyone. |
+| `allowFrom` | User IDs allowed to interact. Empty, omitted, or `["*"]` allows everyone; list specific IDs to restrict access. |
 | `groupPolicy` | `open` (default), `mention`, or `allowlist`. |
 | `groupAllowFrom` | Room allowlist (used when policy is `allowlist`). |
 | `allowRoomMentions` | Accept `@room` mentions in mention mode. |
@@ -313,7 +313,7 @@ nanobot gateway
 
 > WhatsApp bridge updates are not applied automatically for existing installations.
 > After upgrading nanobot, rebuild the local bridge with:
-> `rm -rf ~/.nanobot/bridge && nanobot channels login whatsapp`
+> `rm -rf ~/.hiperone/bridge && nanobot channels login whatsapp`
 
 </details>
 
@@ -754,7 +754,7 @@ signal-cli -a +1234567890 daemon --http localhost:8080
 
 > - `phoneNumber`: Your registered Signal phone number.
 > - `daemonHost` / `daemonPort`: Where signal-cli daemon is listening (default `localhost:8080`).
-> - `dm.policy`: `"open"` (anyone can DM) or `"allowlist"` (only listed numbers/UUIDs). When `"allowlist"`, unlisted DM senders receive a pairing code.
+> - `dm.policy`: `"open"` (anyone can DM) or `"allowlist"` (restrict to listed numbers/UUIDs when the list is non-empty).
 > - `dm.allowFrom`: List of allowed phone numbers or UUIDs (used when policy is `"allowlist"`).
 > - `group.policy`: `"open"` (all groups) or `"allowlist"` (only listed group IDs).
 > - `group.requireMention`: When `true` (default), the bot only responds in groups when @mentioned.

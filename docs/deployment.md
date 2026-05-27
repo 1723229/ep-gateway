@@ -3,15 +3,15 @@
 ## Docker
 
 > [!TIP]
-> The `-v ~/.nanobot:/home/nanobot/.nanobot` flag mounts your local config directory into the container, so your config and workspace persist across container restarts.
-> The container runs as the non-root user `nanobot` (UID 1000) and reads config from `/home/nanobot/.nanobot`. Always mount your host config directory to `/home/nanobot/.nanobot`, not `/root/.nanobot`.
-> If you get **Permission denied**, fix ownership on the host first: `sudo chown -R 1000:1000 ~/.nanobot`, or pass `--user $(id -u):$(id -g)` to match your host UID. Podman users can use `--userns=keep-id` instead.
+> The `-v ~/.hiperone:/root/.hiperone` flag mounts your local config directory into the container, so your config and workspace persist across container restarts.
+> The container currently runs as root and reads config from `/root/.hiperone`. Always mount your host config directory to `/root/.hiperone`.
+> If you get **Permission denied**, fix ownership on the host first: `sudo chown -R root:root ~/.hiperone`, or pass `--user $(id -u):$(id -g)` and mount to that user's home directory consistently.
 >
 > [!IMPORTANT]
 > Official Docker usage currently means building from this repository with the included `Dockerfile`. Docker Hub images under third-party namespaces are not maintained or verified by HKUDS/nanobot; do not mount API keys or bot tokens into them unless you trust the publisher.
 
 > [!IMPORTANT]
-> The gateway and WebSocket channel default to `host: "127.0.0.1"` in `config.json` (set in `nanobot/config/schema.py`). Docker `-p` port forwarding cannot reach a container's loopback interface, so for the host or LAN to reach the exposed ports you must set both binds to `0.0.0.0` in `~/.nanobot/config.json` before starting the container:
+> The gateway and WebSocket channel default to `host: "127.0.0.1"` in `config.json` (set in `nanobot/config/schema.py`). Docker `-p` port forwarding cannot reach a container's loopback interface, so for the host or LAN to reach the exposed ports you must set both binds to `0.0.0.0` in `~/.hiperone/config.json` before starting the container:
 >
 > ```json
 > {
@@ -26,7 +26,7 @@
 
 ```bash
 docker compose run --rm nanobot-cli onboard   # first-time setup
-vim ~/.nanobot/config.json                     # add API keys
+vim ~/.hiperone/config.json                    # add API keys
 docker compose up -d nanobot-gateway           # start gateway
 ```
 
@@ -43,10 +43,10 @@ docker compose down                                      # stop
 docker build -t nanobot .
 
 # Initialize config (first time only)
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot onboard
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot onboard
 
 # Edit config on host to add API keys
-vim ~/.nanobot/config.json
+vim ~/.hiperone/config.json
 
 # Run gateway (connects to enabled channels, e.g. Telegram/Discord/Mochat).
 # Mirrors the security caps and port mappings declared in docker-compose.yml:
@@ -59,13 +59,13 @@ docker run \
   --cap-drop ALL --cap-add SYS_ADMIN \
   --security-opt apparmor=unconfined \
   --security-opt seccomp=unconfined \
-  -v ~/.nanobot:/home/nanobot/.nanobot \
+  -v ~/.hiperone:/root/.hiperone \
   -p 18790:18790 -p 8765:8765 \
   nanobot gateway
 
 # Or run a single command
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot agent -m "Hello!"
-docker run -v ~/.nanobot:/home/nanobot/.nanobot --rm nanobot status
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot agent -m "Hello!"
+docker run -v ~/.hiperone:/root/.hiperone --rm nanobot status
 ```
 
 ## Linux Service
@@ -133,7 +133,7 @@ which nanobot   # e.g. /Users/youruser/.local/bin/nanobot
 
 Use that exact path in the plist. It keeps the Python environment from your install method.
 
-**2. Create `~/Library/LaunchAgents/ai.nanobot.gateway.plist`:**
+**2. Create `~/Library/LaunchAgents/ai.hiperone.gateway.plist`:**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -141,18 +141,18 @@ Use that exact path in the plist. It keeps the Python environment from your inst
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>ai.nanobot.gateway</string>
+  <string>ai.hiperone.gateway</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/Users/youruser/.local/bin/nanobot</string>
     <string>gateway</string>
     <string>--workspace</string>
-    <string>/Users/youruser/.nanobot/workspace</string>
+    <string>/Users/youruser/.hiperone/workspace</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/youruser/.nanobot/workspace</string>
+  <string>/Users/youruser/.hiperone/workspace</string>
 
   <key>RunAtLoad</key>
   <true/>
@@ -164,10 +164,10 @@ Use that exact path in the plist. It keeps the Python environment from your inst
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/Users/youruser/.nanobot/logs/gateway.log</string>
+  <string>/Users/youruser/.hiperone/logs/gateway.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/youruser/.nanobot/logs/gateway.error.log</string>
+  <string>/Users/youruser/.hiperone/logs/gateway.error.log</string>
 </dict>
 </plist>
 ```
@@ -175,18 +175,18 @@ Use that exact path in the plist. It keeps the Python environment from your inst
 **3. Load and start it:**
 
 ```bash
-mkdir -p ~/Library/LaunchAgents ~/.nanobot/logs
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.nanobot.gateway.plist
-launchctl enable gui/$(id -u)/ai.nanobot.gateway
-launchctl kickstart -k gui/$(id -u)/ai.nanobot.gateway
+mkdir -p ~/Library/LaunchAgents ~/.hiperone/logs
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.hiperone.gateway.plist
+launchctl enable gui/$(id -u)/ai.hiperone.gateway
+launchctl kickstart -k gui/$(id -u)/ai.hiperone.gateway
 ```
 
 **Common operations:**
 
 ```bash
-launchctl list | grep ai.nanobot.gateway
-launchctl kickstart -k gui/$(id -u)/ai.nanobot.gateway   # restart
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.nanobot.gateway.plist
+launchctl list | grep ai.hiperone.gateway
+launchctl kickstart -k gui/$(id -u)/ai.hiperone.gateway   # restart
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/ai.hiperone.gateway.plist
 ```
 
 After editing the plist, run `launchctl bootout ...` and `launchctl bootstrap ...` again.

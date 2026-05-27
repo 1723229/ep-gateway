@@ -12,10 +12,12 @@ nanobot does not treat memory as one giant file.
 
 It separates memory into layers, because different kinds of remembering deserve different tools:
 
-- `session.messages` holds the living short-term conversation.
+- `sessions/*.jsonl` holds the living short-term conversation for each channel/session.
 - `memory/history.jsonl` is the running archive of compressed past turns.
 - `SOUL.md`, `USER.md`, and `memory/MEMORY.md` are the durable knowledge files.
 - `GitStore` records how those durable files change over time.
+
+By default the workspace is `~/.hiperone/workspace`, so these files live under `~/.hiperone/workspace/`.
 
 This keeps the system light in the moment, but reflective over time.
 
@@ -67,6 +69,7 @@ This is why nanobot's memory is not just archival. It is interpretive.
 workspace/
 ├── SOUL.md              # The bot's long-term voice and communication style
 ├── USER.md              # Stable knowledge about the user
+├── sessions/            # Per-session short-term conversation JSONL files
 └── memory/
     ├── MEMORY.md        # Project facts, decisions, and durable context
     ├── history.jsonl    # Append-only history summaries
@@ -81,6 +84,15 @@ These files play different roles:
 - `USER.md` remembers who the user is and what they prefer.
 - `MEMORY.md` remembers what remains true about the work itself.
 - `history.jsonl` remembers what happened on the way there.
+
+## Auto Compact
+
+There are two compaction paths:
+
+- **Token-driven consolidation** runs when the prompt gets too large. It appends summaries to `memory/history.jsonl` and advances an internal cursor, but it does not rewrite older raw session messages immediately.
+- **Idle auto compact** runs only when `agents.defaults.idleCompactAfterMinutes` is greater than `0`. It archives older idle-session messages to `memory/history.jsonl`, keeps a recent legal suffix in `sessions/*.jsonl`, and rewrites that session file with the compacted form.
+
+Leave `idleCompactAfterMinutes` at `0` if you need full structured session JSONL for debugging or auditing. Use token-driven consolidation alone when preserving the raw tool-call trail matters more than minimizing idle-session replay cost.
 
 ## Why `history.jsonl`
 
@@ -150,7 +162,7 @@ Dream is configured under `agents.defaults.dream`:
         "intervalH": 2,
         "modelOverride": null,
         "maxBatchSize": 20,
-        "maxIterations": 10
+        "maxIterations": 15
       }
     }
   }
@@ -163,13 +175,29 @@ Dream is configured under `agents.defaults.dream`:
 | `modelOverride` | Optional Dream-specific model override |
 | `maxBatchSize` | How many history entries Dream processes per run |
 | `maxIterations` | The tool budget for Dream's editing phase |
+| `annotateLineAges` | Whether Dream annotates stale `MEMORY.md` lines with git-blame age hints before analysis |
 
 In practical terms:
 
 - `modelOverride: null` means Dream uses the same model as the main agent. Set it only if you want Dream to run on a different model.
 - `maxBatchSize` controls how many new `history.jsonl` entries Dream consumes in one run. Larger batches catch up faster; smaller batches are lighter and steadier.
 - `maxIterations` limits how many read/edit steps Dream can take while updating `SOUL.md`, `USER.md`, and `MEMORY.md`. It is a safety budget, not a quality score.
+- `annotateLineAges` defaults to `true`. Set it to `false` if you want Dream to analyze `MEMORY.md` without per-line age hints.
 - `intervalH` is the normal way to configure Dream. Internally it runs as an `every` schedule, not as a cron expression.
+
+Idle auto compact is configured separately under `agents.defaults`:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "idleCompactAfterMinutes": 15
+    }
+  }
+}
+```
+
+`0` disables idle auto compact, which is the default.
 
 Legacy note:
 

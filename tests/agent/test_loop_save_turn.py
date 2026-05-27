@@ -5,9 +5,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from nanobot.agent.context import ContextBuilder
-from nanobot.agent.loop import AgentLoop
+from nanobot.agent.loop import AgentLoop, _CURRENT_OPENVIKING_SESSION_KEY
+from nanobot.agent.runner import AgentRunResult
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
+from nanobot.config.schema import Config
 from nanobot.providers.base import LLMResponse
 from nanobot.session.goal_state import GOAL_STATE_KEY
 from nanobot.session.manager import Session, SessionManager
@@ -51,6 +53,126 @@ def test_agent_loop_llm_runtime_reflects_current_provider_and_model(tmp_path: Pa
 
     assert runtime.provider is next_provider
     assert runtime.model == "next-model"
+
+
+@pytest.mark.asyncio
+async def test_run_agent_loop_sets_openviking_session_context(tmp_path: Path) -> None:
+    loop = _make_full_loop(tmp_path)
+    session = loop.sessions.get_or_create("admin:chat-42")
+    seen: list[str] = []
+
+    async def fake_run(_spec):
+        seen.append(_CURRENT_OPENVIKING_SESSION_KEY.get())
+        return AgentRunResult(
+            final_content="ok",
+            messages=[{"role": "assistant", "content": "ok"}],
+            stop_reason="stop",
+        )
+
+    loop.runner.run = fake_run  # type: ignore[method-assign]
+
+    await loop._run_agent_loop(
+        [{"role": "user", "content": "hello"}],
+        session=session,
+        session_key=session.key,
+    )
+
+    assert seen == ["admin:chat-42"]
+    assert _CURRENT_OPENVIKING_SESSION_KEY.get() == "default"
+
+
+@pytest.mark.asyncio
+async def test_ensure_viking_client_uses_runtime_config(monkeypatch, tmp_path: Path) -> None:
+    config = Config.model_validate(
+        {
+            "agents": {"defaults": {"workspace": str(tmp_path)}},
+            "openviking": {
+                "enabled": True,
+                "mode": "remote",
+                "serverUrl": "https://viking.example.com",
+                "embeddingModel": "openai/text-embedding-3-large",
+            },
+        }
+    )
+    provider = MagicMock()
+    provider.get_default_model.return_value = "test-model"
+    provider.chat_with_retry = AsyncMock(return_value=LLMResponse(content="ok"))
+    provider.generation.max_tokens = 4096
+    seen: dict[str, object] = {}
+
+    class FakeVikingClient:
+        def set_max_concurrent_commits(self, _n: int) -> None:
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        @classmethod
+        async def from_openviking_config(cls, ov_config, *, full_config=None, **_kwargs):
+            seen["ov_config"] = ov_config
+            seen["full_config"] = full_config
+            return cls()
+
+    monkeypatch.setattr("nanobot.openviking.HAS_OPENVIKING", True)
+    monkeypatch.setattr("nanobot.openviking.client.VikingClient", FakeVikingClient)
+
+    loop = AgentLoop.from_config(config, provider=provider)
+    await loop._ensure_viking_client()
+
+    assert seen["ov_config"] is config.openviking
+    assert seen["full_config"] is config
+    await loop.close_mcp()
+
+
+@pytest.mark.asyncio
+async def test_close_mcp_closes_openviking_client(tmp_path: Path) -> None:
+    loop = _make_full_loop(tmp_path)
+    client = AsyncMock()
+    loop._viking_client = client
+    loop.context.set_viking_client(client)
+
+    from nanobot.agent.tools.openviking import _OVTool
+
+    _OVTool._shared_client = client
+
+    await loop.close_mcp()
+
+    client.aclose.assert_awaited_once()
+    assert loop._viking_client is None
+    assert loop.context._viking_client is None
+    assert _OVTool._shared_client is None
+
+
+@pytest.mark.asyncio
+async def test_openviking_tool_fallback_uses_runtime_config(monkeypatch) -> None:
+    from nanobot.agent.tools.openviking import OVReadTool, _OVTool
+
+    seen: dict[str, object] = {}
+
+    class FakeVikingClient:
+        @classmethod
+        async def from_openviking_config(cls, ov_config):
+            seen["ov_config"] = ov_config
+            return cls()
+
+        @classmethod
+        async def from_config(cls):
+            seen["from_config"] = True
+            return cls()
+
+        async def read_content(self, uri: str, level: str = "abstract") -> str:
+            return f"{uri}:{level}"
+
+    monkeypatch.setattr("nanobot.agent.tools.openviking.VikingClient", FakeVikingClient)
+    _OVTool._shared_client = None
+    ov_config = object()
+
+    result = await OVReadTool(ov_config=ov_config).execute("viking://doc", level="read")
+
+    assert result == "viking://doc:read"
+    assert seen["ov_config"] is ov_config
+    assert "from_config" not in seen
+    _OVTool._shared_client = None
 
 
 @pytest.mark.asyncio
@@ -558,7 +680,7 @@ async def test_process_message_does_not_duplicate_early_persisted_user_message(t
 async def test_process_message_uses_context_chat_id_for_runtime_prompt(tmp_path: Path) -> None:
     loop = _make_full_loop(tmp_path)
     loop.consolidator.maybe_consolidate_by_tokens = AsyncMock(return_value=False)  # type: ignore[method-assign]
-    loop.context.build_messages = MagicMock(  # type: ignore[method-assign]
+    loop.context.build_messages = AsyncMock(  # type: ignore[method-assign]
         return_value=[
             {"role": "system", "content": "system"},
             {"role": "user", "content": "runtime + hello"},
@@ -609,7 +731,7 @@ async def test_process_message_uses_explicit_session_metadata_for_goal_context(
     system_session.metadata = {}
     loop.sessions.save(system_session)
 
-    loop.context.build_messages = MagicMock(  # type: ignore[method-assign]
+    loop.context.build_messages = AsyncMock(  # type: ignore[method-assign]
         return_value=[
             {"role": "system", "content": "system"},
             {"role": "user", "content": "runtime + heartbeat"},
@@ -933,17 +1055,18 @@ def test_prompt_merge_does_not_replace_standalone_subagent_history_entry(tmp_pat
     assert inserted is True
 
     builder = ContextBuilder(tmp_path)
-    projected = builder.build_messages(
+    projected = asyncio.run(builder.build_messages(
         history=session.get_history(max_messages=0),
         current_message="",
         current_role="assistant",
         channel="cli",
         chat_id="merge",
-    )
+    ))
 
     non_system = [m for m in projected if m.get("role") != "system"]
     assert len(non_system) == 2
     assert "subagent result" in non_system[-1]["content"]
+    assert non_system[0]["content"] == "previous assistant"
     assert session.messages[-1]["content"] == "subagent result"
     assert session.messages[-1]["injected_event"] == "subagent_result"
 
