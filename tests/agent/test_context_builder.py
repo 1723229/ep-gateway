@@ -365,13 +365,13 @@ class TestBuildMessages:
 
     def test_current_runtime_lines_are_injected(self, tmp_path):
         builder = _builder(tmp_path)
-        messages = builder.build_messages(
+        messages = asyncio.run(builder.build_messages(
             [],
             "please use @zoom tonight",
             current_runtime_lines=[
                 "CLI App Attachment: @zoom (installed; tool=run_cli_app; entry_point=cli-anything-zoom).",
             ],
-        )
+        ))
         user_msg = str(messages[-1]["content"])
 
         assert "CLI App Attachment: @zoom" in user_msg
