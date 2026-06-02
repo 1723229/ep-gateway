@@ -334,6 +334,14 @@ class ChannelManager:
                         await self._send_with_retry(channel, msg)
                     continue
 
+                if msg.metadata.get("_file_edit_events"):
+                    channel = self.channels.get(msg.channel)
+                    if channel is not None:
+                        await self._send_with_retry(channel, msg)
+                    else:
+                        logger.warning("Unknown channel: {}", msg.channel)
+                    continue
+
                 if msg.metadata.get("_progress"):
                     if msg.metadata.get("_tool_hint") and not self._should_send_progress(
                         msg.channel, tool_hint=True,
