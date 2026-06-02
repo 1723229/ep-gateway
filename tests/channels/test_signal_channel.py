@@ -498,9 +498,9 @@ class TestIsAllowed:
     pipe-joined composite sender_ids and the +/no-+ phone variants.
     """
 
-    def test_denies_when_allowlist_empty(self):
+    def test_allows_when_allowlist_empty(self):
         ch = _make_channel(dm_enabled=True, dm_policy="allowlist")
-        assert ch.is_allowed("+19995550001") is False
+        assert ch.is_allowed("+19995550001") is True
 
     def test_denies_when_no_policy_allows(self):
         """When both dm and group are disabled, is_allowed denies."""
@@ -547,8 +547,7 @@ class TestEndToEndDMRouting:
     """End-to-end tests that keep the real _handle_message chain (no mock),
     verifying that _check_inbound_policy + _handle_message work together
     correctly for DM routing.  The override of _handle_message publishes
-    directly to bus (policy already checked); denied DMs call
-    super()._handle_message which issues a pairing code.
+    directly to bus after policy has already been checked.
     """
 
     @pytest.mark.asyncio
@@ -575,8 +574,8 @@ class TestEndToEndDMRouting:
         assert published[0].sender_id == "+19995550001"
 
     @pytest.mark.asyncio
-    async def test_allowlist_dm_denied_triggers_pairing(self):
-        """Allowlist DM: denied sender triggers pairing code via send()."""
+    async def test_allowlist_dm_empty_allowlist_publishes(self):
+        """Allowlist DM with empty allow_from is open access."""
         ch = _make_channel(dm_enabled=True, dm_policy="allowlist", dm_allow_from=[])
         ch._http = _FakeHTTPClient()  # type: ignore[assignment]
 
@@ -594,17 +593,13 @@ class TestEndToEndDMRouting:
         params = _dm_envelope(source_number="+19995550002", message="hello")
         await ch._handle_receive_notification(params)
 
-        # Should NOT publish to bus — sender is not on allowlist.
-        assert published == []
-        # Should have sent a pairing code via send (captured in HTTP posts).
-        assert len(ch._http.posts) == 1  # type: ignore[attr-defined]
-        sent_text = ch._http.posts[0]["json"]["params"]["message"]  # type: ignore[attr-defined]
-        assert "pairing" in sent_text.lower() or "pair" in sent_text.lower()
+        assert len(published) == 1
+        assert published[0].sender_id == "+19995550002"
+        assert ch._http.posts == []  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
-    async def test_allowlist_dm_denied_with_group_open_still_pairs(self):
-        """dm.policy="allowlist" + group.policy="open": denied DM sender
-        must still get a pairing code, not be leaked by the group open check."""
+    async def test_allowlist_dm_empty_allowlist_with_group_open_publishes(self):
+        """dm.policy="allowlist" + empty allow_from remains open for DMs."""
         ch = _make_channel(
             dm_enabled=True,
             dm_policy="allowlist",
@@ -628,8 +623,9 @@ class TestEndToEndDMRouting:
         params = _dm_envelope(source_number="+19995550002", message="hello")
         await ch._handle_receive_notification(params)
 
-        assert published == []
-        assert len(ch._http.posts) == 1  # type: ignore[attr-defined]
+        assert len(published) == 1
+        assert published[0].sender_id == "+19995550002"
+        assert ch._http.posts == []  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_open_group_policy_publishes_to_bus(self):
@@ -790,35 +786,20 @@ class TestHandleDataMessageDM:
         assert len(handled) == 1
 
     @pytest.mark.asyncio
-    async def test_dm_allowlist_rejected_triggers_pairing(self):
-        # Denied DM senders go through super()._handle_message which checks
-        # is_allowed → sends pairing code via self.send().
+    async def test_dm_allowlist_rejected_is_dropped(self):
         ch, handled = self._make_dm_channel(policy="allowlist", allow_from=["+10000000001"])
         ch._http = _FakeHTTPClient()  # type: ignore[attr-defined]
         params = _dm_envelope(source_number="+19995550002")
         await ch._handle_receive_notification(params)
-        # The denied DM path calls super()._handle_message, not self._handle_message,
-        # so the capture list stays empty. Verify pairing code was sent via HTTP.
         assert handled == []
-        assert len(ch._http.posts) == 1  # type: ignore[attr-defined]
-        sent_text = ch._http.posts[0]["json"]["params"]["message"]  # type: ignore[attr-defined]
-        assert "pairing" in sent_text.lower() or "pair" in sent_text.lower()
+        assert ch._http.posts == []  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
-    async def test_dm_paired_sender_allowed_without_allowlist_entry(self, monkeypatch):
-        # Once a sender completes pairing they should pass is_allowed on every
-        # subsequent message — otherwise the pairing reply loops forever.
-        approved = {"+19995550002"}
-        monkeypatch.setattr(
-            "nanobot.channels.signal.is_approved",
-            lambda channel, sender_id: sender_id in approved,
-        )
+    async def test_dm_empty_allowlist_allows_sender(self):
         ch = _make_channel(dm_enabled=True, dm_policy="allowlist", dm_allow_from=[])
         assert ch.is_allowed("+19995550002") is True
-        # Variant forms (with/without "+") must still match a stored approval.
         assert ch.is_allowed("19995550002") is True
-        # Unpaired sender stays denied.
-        assert ch.is_allowed("+19995559999") is False
+        assert ch.is_allowed("+19995559999") is True
 
     @pytest.mark.asyncio
     async def test_dm_allowlist_matches_without_plus_prefix(self):

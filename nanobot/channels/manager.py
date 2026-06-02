@@ -57,6 +57,7 @@ class ChannelManager:
         *,
         session_manager: "SessionManager | None" = None,
         webui_runtime_model_name: Callable[[], str | None] | None = None,
+        cron_service: Any = None,
         webui_static_dist: bool = True,
         webui_runtime_surface: str = "browser",
         webui_runtime_capabilities: dict[str, Any] | None = None,
@@ -65,6 +66,7 @@ class ChannelManager:
         self.bus = bus
         self._session_manager = session_manager
         self._webui_runtime_model_name = webui_runtime_model_name
+        self._cron_service = cron_service
         self._webui_static_dist = webui_static_dist
         self._webui_runtime_surface = webui_runtime_surface
         self._webui_runtime_capabilities = dict(webui_runtime_capabilities or {})
@@ -110,7 +112,11 @@ class ChannelManager:
                 continue
             try:
                 kwargs: dict[str, Any] = {}
-                if cls.name == "websocket":
+                if cls.name == "admin":
+                    kwargs["session_manager"] = self._session_manager
+                    kwargs["full_config"] = self.config
+                    kwargs["cron_service"] = self._cron_service
+                elif cls.name == "websocket":
                     if self._session_manager is not None:
                         kwargs["session_manager"] = self._session_manager
                         static_path = _default_webui_dist() if self._webui_static_dist else None
@@ -172,10 +178,8 @@ class ChannelManager:
             else:
                 allow = getattr(cfg, "allow_from", None)
             if allow is None:
-                # allowFrom omitted → pairing-only mode.  Unapproved senders
-                # receive a pairing code instead of being silently ignored.
                 logger.info(
-                    '"{}" has no allowFrom; unapproved users will receive a pairing code',
+                    '"{}" has no allowFrom; all senders are allowed',
                     name,
                 )
 
@@ -328,6 +332,14 @@ class ChannelManager:
                     channel = self.channels.get(msg.channel)
                     if channel is not None and channel.show_reasoning:
                         await self._send_with_retry(channel, msg)
+                    continue
+
+                if msg.metadata.get("_file_edit_events"):
+                    channel = self.channels.get(msg.channel)
+                    if channel is not None:
+                        await self._send_with_retry(channel, msg)
+                    else:
+                        logger.warning("Unknown channel: {}", msg.channel)
                     continue
 
                 if msg.metadata.get("_progress"):

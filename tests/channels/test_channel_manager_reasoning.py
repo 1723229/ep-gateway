@@ -219,6 +219,31 @@ async def test_file_edit_events_route_to_channel_capability(manager):
 
 
 @pytest.mark.asyncio
+async def test_file_edit_events_bypass_send_progress_filter(manager, monkeypatch):
+    channel = manager.channels["mock"]
+    channel.send_progress = False
+    edits = [{"version": 1, "phase": "start", "path": "src/app.py"}]
+    sent: list[tuple[BaseChannel, OutboundMessage]] = []
+
+    async def _capture_send(ch: BaseChannel, msg: OutboundMessage) -> None:
+        sent.append((ch, msg))
+
+    monkeypatch.setattr(manager, "_send_with_retry", _capture_send)
+    await manager.bus.publish_outbound(OutboundMessage(
+        channel="mock",
+        chat_id="c1",
+        content="",
+        metadata={"_progress": True, "_file_edit_events": edits},
+    ))
+
+    await _pump_one(manager)
+
+    assert sent
+    assert sent[0][0] is channel
+    assert sent[0][1].metadata["_file_edit_events"] == edits
+
+
+@pytest.mark.asyncio
 async def test_base_channel_file_edit_events_are_noop_safe():
     class _Plain(BaseChannel):
         name = "plain"

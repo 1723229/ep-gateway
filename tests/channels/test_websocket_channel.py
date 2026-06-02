@@ -1440,7 +1440,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert body["agent"]["provider"] == "openai"
         assert body["agent"]["model_preset"] == "default"
         assert body["agent"]["max_tokens"] == 8192
-        assert body["agent"]["timezone"] == "UTC"
+        assert body["agent"]["timezone"] == "Asia/Shanghai"
         assert body["agent"]["tool_hint_max_length"] == 40
         presets = {preset["name"]: preset for preset in body["model_presets"]}
         assert presets["default"]["active"] is True
@@ -1483,7 +1483,7 @@ async def test_settings_api_returns_safe_subset_and_updates_whitelist(
         assert image_providers["gemini"]["label"] == "Gemini"
         assert body["runtime"]["config_path"] == str(config_path)
         workspace_path = body["runtime"]["workspace_path"].replace("\\", "/")
-        assert workspace_path.endswith("/.nanobot/workspace")
+        assert workspace_path.endswith("/.hiperone/workspace")
         assert body["runtime"]["gateway_port"] == 18790
         assert body["advanced"]["exec_enabled"] is True
         assert body["advanced"]["webui_allow_local_service_access"] is True
@@ -2023,7 +2023,7 @@ async def test_static_token_accepts_issued_token_as_fallback(bus: MagicMock) -> 
 
 
 @pytest.mark.asyncio
-async def test_allow_from_empty_list_denies_all(bus: MagicMock) -> None:
+async def test_allow_from_empty_list_allows_all(bus: MagicMock) -> None:
     port = 29886
     channel = _ch(bus, port=port, allowFrom=[])
 
@@ -2031,10 +2031,10 @@ async def test_allow_from_empty_list_denies_all(bus: MagicMock) -> None:
     await asyncio.sleep(0.3)
 
     try:
-        with pytest.raises(websockets.exceptions.InvalidStatus) as exc_info:
-            async with websockets.connect(f"ws://127.0.0.1:{port}/ws?client_id=anyone"):
-                pass
-        assert exc_info.value.response.status_code == 403
+        async with websockets.connect(f"ws://127.0.0.1:{port}/ws?client_id=anyone") as client:
+            ready = json.loads(await client.recv())
+            assert ready["event"] == "ready"
+            assert ready["client_id"] == "anyone"
     finally:
         await channel.stop()
         await server_task
