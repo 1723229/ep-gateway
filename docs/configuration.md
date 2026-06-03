@@ -1,6 +1,6 @@
 # Configuration
 
-Config file: `~/.nanobot/config.json`
+Config file: `~/.hiperone/config.json`
 
 > [!NOTE]
 > If your config file is older than the current schema, you can refresh it without overwriting your existing values:
@@ -91,7 +91,7 @@ IMAP_PASSWORD=your-password-here
 
 ```bash
 docker run --rm --env-file=./nanobot.env \
-  -v ~/.nanobot:/home/nanobot/.nanobot \
+  -v ~/.hiperone:/root/.hiperone \
   nanobot agent -m "Hello"
 ```
 
@@ -424,7 +424,7 @@ No `providers.openaiCodex` block is needed in `config.json`; `nanobot provider l
 nanobot provider login openai-codex
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.hiperone/config.json`):
 ```json
 {
   "agents": {
@@ -440,10 +440,10 @@ nanobot provider login openai-codex
 nanobot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -462,7 +462,7 @@ No `providers.githubCopilot` block is needed in `config.json`; `nanobot provider
 nanobot provider login github-copilot
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.hiperone/config.json`):
 ```json
 {
   "agents": {
@@ -478,10 +478,10 @@ nanobot provider login github-copilot
 nanobot agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+nanobot agent -c ~/.hiperone-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -686,7 +686,7 @@ Run a local model with Ollama, then add to config:
 ollama run llama3.2
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 ```json
 {
   "providers": {
@@ -718,7 +718,7 @@ ollama run llama3.2
 - Load a model (e.g., Llama, Mistral, Qwen)
 - Click "Start Server" (default port: 1234)
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 ```json
 {
   "providers": {
@@ -753,7 +753,7 @@ ollama run llama3.2
 - Open Atomic Chat, download a model, and keep the app running. The local API is enabled by default.
 - Copy the model ID exposed by the local API. For example, the model ID for `Qwen 3 32B` might be `qwen3-32b`.
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 ```json
 {
@@ -831,7 +831,7 @@ docker run -d \
   --target_device GPU
 ```
 
-**3. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**3. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 ```json
 {
@@ -864,7 +864,7 @@ Run your own model with vLLM or any OpenAI-compatible server, then add to config
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.hiperone/config.json`):
 
 *Provider (set API key to null for local servers):*
 ```json
@@ -1036,7 +1036,7 @@ When `modelPreset` is `null` or omitted, startup uses the implicit `default` pre
 
 ## Channel Settings
 
-Global settings that apply to all channels. Configure under the `channels` section in `~/.nanobot/config.json`:
+Global settings that apply to all channels. Configure under the `channels` section in `~/.hiperone/config.json`:
 
 ```json
 {
@@ -1104,7 +1104,7 @@ When a channel `send()` raises, nanobot retries at the channel-manager layer. By
 
 ## Web Tools
 
-nanobot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.nanobot/config.json` under `tools.web`.
+nanobot incorporates basic tools for accessing the web. These include searching via APIs, and fetching arbitrary web pages in Markdown format. They are enabled by default, and can be configured in `~/.hiperone/config.json` under `tools.web`.
 
 If you want to disable them, which removes both `web_search` and `web_fetch` from the tool list sent to the LLM, set `tools.web.enable` to `false`:
 
@@ -1144,7 +1144,7 @@ If you need to allow trusted private ranges such as Tailscale / CGNAT addresses,
 
 ### Web Search
 
-nanobot supports multiple web search providers. Configure in `~/.nanobot/config.json` under `tools.web.search`.
+nanobot supports multiple web search providers. Configure in `~/.hiperone/config.json` under `tools.web.search`.
 
 By default, web search uses `duckduckgo`, and it works out of the box without an API key.
 
@@ -1413,55 +1413,18 @@ For API keys, tokens, and other secrets, see [Environment Variables for Secrets]
 | `tools.exec.enable` | `true` | When `false`, the shell `exec` tool is not registered at all. Use this to completely disable shell command execution. |
 | `tools.exec.timeout` | `60` | Default hard timeout in seconds for shell commands. Config values may exceed the per-call tool cap; set `0` to disable the hard timeout for trusted long-running commands. |
 | `tools.exec.pathAppend` | `""` | Extra directories to append to `PATH` when running shell commands (e.g. `/usr/sbin` for `ufw`). |
-| `channels.*.allowFrom` | omitted | Access control per channel. Omit to use pairing-only mode; set `["*"]` to allow everyone; or list specific user IDs. See [Pairing](#pairing) for details. |
+| `channels.*.allowFrom` | omitted | Access control per channel. Empty, omitted, or `["*"]` allows everyone; list specific user IDs to restrict access. |
 
-**Docker security**: The official Docker image runs as a non-root user (`nanobot`, UID 1000) with bubblewrap pre-installed. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
+**Docker security**: The repository Dockerfile includes bubblewrap and currently runs with `HOME=/root`. When using `docker-compose.yml`, the container drops all Linux capabilities except `SYS_ADMIN` (required for bwrap's namespace isolation).
 
 
 ## Pairing
 
-Pairing lets users get access to the bot through a simple code exchange — no config editing required. This works for both new users and existing users connecting from a new channel (e.g. someone already approved on Telegram now setting up Discord).
-
-### How it works
-
-1. A user sends a DM to the bot on any channel (Telegram, Discord, Slack, etc.) where they aren't yet approved.
-2. The bot replies with a pairing code (like `ABCD-EFGH`) and tells them to forward it to you.
-3. You approve the code:
-
-```text
-/pairing approve ABCD-EFGH
-```
-
-4. The user can now chat with the bot normally.
-
-Pairing only works in **DMs** — unapproved users in group chats are silently ignored.
-
-### Pairing-only mode
-
-By default, if you don't set `allowFrom`, anyone who isn't approved yet will get a pairing code when they DM the bot. This means you can skip `allowFrom` entirely and manage all access through pairing:
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true
-    }
-  }
-}
-```
-
-If you prefer to allow everyone without approval:
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "allowFrom": ["*"]
-    }
-  }
-}
-```
+Pairing commands manage pending and approved pairing records for deployments
+that create pairing codes through custom flows or older channel behavior.
+Current built-in channel allowlists do not create pairing codes automatically:
+empty or omitted `allowFrom` allows everyone, and a non-empty allowlist simply
+ignores unlisted senders.
 
 ### Managing access
 
@@ -1542,7 +1505,7 @@ How it works:
 
 Time is context. Context should be precise.
 
-By default, nanobot uses `UTC` for runtime time context. If you want the agent to think in your local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
+By default, nanobot uses `Asia/Shanghai` for runtime time context. To use a different local time, set `agents.defaults.timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
 
 ```json
 {

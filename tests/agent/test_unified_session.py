@@ -316,7 +316,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
             model="test-model",
             sessions=sessions,
             context_window_tokens=1000,
-            build_messages=MagicMock(return_value=[]),
+            build_messages=AsyncMock(return_value=[]),
             get_tool_definitions=MagicMock(return_value=[]),
             max_completion_tokens=100,
         )
@@ -349,7 +349,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
                 model="test-model",
                 sessions=sessions,
                 context_window_tokens=1000,
-                build_messages=MagicMock(return_value=[]),
+                build_messages=AsyncMock(return_value=[]),
                 get_tool_definitions=MagicMock(return_value=[]),
                 max_completion_tokens=100,
             )
@@ -379,7 +379,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
             model="test-model",
             sessions=sessions,
             context_window_tokens=1000,
-            build_messages=MagicMock(return_value=[]),
+            build_messages=AsyncMock(return_value=[]),
             get_tool_definitions=MagicMock(return_value=[]),
             max_completion_tokens=100,
         )
@@ -389,7 +389,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
         sessions.get_or_create.return_value = session
 
         # Simulate over-budget: estimated > budget
-        consolidator.estimate_session_prompt_tokens = MagicMock(return_value=(950, "tiktoken"))
+        consolidator.estimate_session_prompt_tokens = AsyncMock(return_value=(950, "tiktoken"))
         # No valid boundary found → returns gracefully without archiving
         consolidator.pick_consolidation_boundary = MagicMock(return_value=None)
         consolidator.archive = AsyncMock()
@@ -397,7 +397,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
         await consolidator.maybe_consolidate_by_tokens(session)
 
         # estimate was called (consolidation was attempted)
-        consolidator.estimate_session_prompt_tokens.assert_called_once_with(
+        consolidator.estimate_session_prompt_tokens.assert_awaited_once_with(
             session,
         )
         # but archive was not called (no valid boundary)

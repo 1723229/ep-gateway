@@ -24,15 +24,13 @@ These commands work inside chat channels and interactive agent sessions:
 
 ## Pairing
 
-When someone sends a DM to the bot and isn't on the allowlist — whether it's a new user or an existing user on a new channel — nanobot automatically replies with a **pairing code** (like `ABCD-EFGH`) that expires in 10 minutes. To grant them access:
+Pairing commands manage pending and approved pairing records for deployments
+that create pairing codes through custom flows or older channel behavior.
+Current built-in channel allowlists do not create pairing codes automatically.
 
-```text
-/pairing approve ABCD-EFGH
-```
+To see pending requests, use `/pairing`. To remove someone later, use `/pairing revoke <user_id>` — you can find user IDs in the `/pairing list` output.
 
-To see who's waiting, use `/pairing`. To remove someone later, use `/pairing revoke <user_id>` — you can find user IDs in the `/pairing list` output.
-
-See [Configuration: Pairing](./configuration.md#pairing) for the full setup guide.
+See [Configuration: Pairing](./configuration.md#pairing) for details.
 
 ## Model Presets
 
@@ -56,9 +54,9 @@ Preset names come from the top-level `modelPresets` config. Switching is runtime
 
 ## Periodic Tasks
 
-The gateway wakes up every 30 minutes and checks `HEARTBEAT.md` in your workspace (`~/.nanobot/workspace/HEARTBEAT.md`). If the file has tasks under `## Active Tasks`, the agent executes them and delivers results to your most recently active chat channel. If there are no active tasks, the heartbeat is skipped silently.
+The gateway wakes up every 30 minutes and checks `HEARTBEAT.md` in your workspace (`~/.hiperone/workspace/HEARTBEAT.md`). If the file has tasks under `## Active Tasks`, the agent executes them and delivers results to your most recently active chat channel. If there are no active tasks, the heartbeat is skipped silently.
 
-**Setup:** edit `~/.nanobot/workspace/HEARTBEAT.md` (created automatically by `nanobot onboard`):
+**Setup:** edit `~/.hiperone/workspace/HEARTBEAT.md` (created automatically by `nanobot onboard`):
 
 ```markdown
 ## Active Tasks

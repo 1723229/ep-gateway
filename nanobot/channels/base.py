@@ -10,13 +10,6 @@ from loguru import logger
 
 from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.bus.queue import MessageBus
-from nanobot.pairing import (
-    PAIRING_CODE_META_KEY,
-    format_pairing_reply,
-    generate_code,
-    is_approved,
-)
-
 
 class BaseChannel(ABC):
     """
@@ -195,19 +188,19 @@ class BaseChannel(ABC):
         return bool(streaming) and type(self).send_delta is not BaseChannel.send_delta
 
     def is_allowed(self, sender_id: str) -> bool:
-        """Check sender permission: star > allowlist > pairing store > deny."""
+        """Check if *sender_id* is permitted. Empty list or ``"*"`` allows all."""
         if isinstance(self.config, dict):
-            allow_list = self.config.get("allow_from") or self.config.get("allowFrom") or []
+            if "allow_from" in self.config:
+                allow_list = self.config.get("allow_from")
+            else:
+                allow_list = self.config.get("allowFrom", [])
         else:
-            allow_list = getattr(self.config, "allow_from", None) or []
+            allow_list = getattr(self.config, "allow_from", [])
+        if not allow_list:
+            return True
         if "*" in allow_list:
             return True
-        # allowFrom entries are opaque tokens — must match exactly.
-        if str(sender_id) in allow_list:
-            return True
-        if is_approved(self.name, str(sender_id)):
-            return True
-        return False
+        return str(sender_id) in allow_list
 
     async def _handle_message(
         self,
@@ -219,28 +212,13 @@ class BaseChannel(ABC):
         session_key: str | None = None,
         is_dm: bool = False,
     ) -> None:
-        """Handle an incoming message: check permissions, issue pairing codes in DMs, or forward to bus."""
+        """Handle an incoming message: check permissions and forward to the bus."""
         if not self.is_allowed(sender_id):
-            if is_dm:
-                code = generate_code(self.name, str(sender_id))
-                await self.send(
-                    OutboundMessage(
-                        channel=self.name,
-                        chat_id=str(chat_id),
-                        content=format_pairing_reply(code),
-                        metadata={PAIRING_CODE_META_KEY: code},
-                    )
-                )
-                self.logger.info(
-                    "Sent pairing code {} to sender {} in chat {}",
-                    code, sender_id, chat_id,
-                )
-            else:
-                self.logger.warning(
-                    "Access denied for sender {}. "
-                    "Add them to allowFrom list in config to grant access.",
-                    sender_id,
-                )
+            self.logger.warning(
+                "Access denied for sender {}. "
+                "Add them to allowFrom list in config to grant access.",
+                sender_id,
+            )
             return
 
         meta = metadata or {}
