@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextvars
 import dataclasses
 import os
 import time
@@ -20,14 +19,13 @@ from nanobot.agent import model_presets as preset_helpers
 from nanobot.agent.autocompact import AutoCompact
 from nanobot.agent.context import ContextBuilder
 from nanobot.agent.hook import AgentHook, CompositeHook
-from nanobot.agent.memory import Consolidator, Dream
+from nanobot.agent.memory import Consolidator
 from nanobot.agent.progress_hook import AgentProgressHook
 from nanobot.agent.runner import _MAX_INJECTIONS_PER_TURN, AgentRunner, AgentRunSpec
 from nanobot.agent.subagent import SubagentManager
 from nanobot.agent.tools.context import RequestContext, bind_request_context, reset_request_context
 from nanobot.agent.tools.file_state import FileStateStore, bind_file_states, reset_file_states
 from nanobot.agent.tools.message import MessageTool
-from nanobot.agent.tools.platform_access import register_platform_access_tools
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.agent.tools.self import MyTool
 from nanobot.bus.events import InboundMessage, OutboundMessage
@@ -67,8 +65,6 @@ from nanobot.utils.runtime import (
 if TYPE_CHECKING:
     from nanobot.config.schema import (
         ChannelsConfig,
-        Config,
-        OpenVikingConfig,
         ProviderConfig,
         ToolsConfig,
     )
@@ -76,10 +72,6 @@ if TYPE_CHECKING:
 
 
 UNIFIED_SESSION_KEY = "unified:default"
-_CURRENT_OPENVIKING_SESSION_KEY: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "nanobot_openviking_session_key",
-    default="default",
-)
 
 class TurnState(Enum):
     RESTORE = auto()
@@ -131,6 +123,10 @@ class TurnContext:
 
     pending_queue: asyncio.Queue | None = None
     pending_summary: str | None = None
+
+    ephemeral: bool = False
+    tools: ToolRegistry | None = None
+
     turn_wall_started_at: float = field(default_factory=time.time)
     visible_run_started_at: float | None = None
     turn_latency_ms: int | None = None
@@ -204,8 +200,6 @@ class AgentLoop:
         hooks: list[AgentHook] | None = None,
         unified_session: bool = False,
         disabled_skills: list[str] | None = None,
-        skills_config: Any | None = None,
-        openviking_config: OpenVikingConfig | None = None,
         tools_config: ToolsConfig | None = None,
         image_generation_provider_config: ProviderConfig | None = None,
         image_generation_provider_configs: dict[str, ProviderConfig] | None = None,
@@ -216,17 +210,11 @@ class AgentLoop:
         preset_snapshot_loader: preset_helpers.PresetSnapshotLoader | None = None,
         runtime_events: RuntimeEventBus | None = None,
         runtime_model_publisher: Callable[[str, str | None], None] | None = None,
-        full_config: Config | None = None,
     ):
-        from nanobot.config.schema import SkillsConfig, ToolsConfig
+        from nanobot.config.schema import ToolsConfig
 
         _tc = tools_config or ToolsConfig()
         defaults = AgentDefaults()
-        self.skills_config = skills_config or SkillsConfig()
-        self.openviking_config = openviking_config
-        self._full_config = full_config
-        self._viking_client: Any | None = None
-        self._viking_client_initialized = False
         self.bus = bus
         self.runtime_events = runtime_events or RuntimeEventBus()
         self.runtime_event_publisher = RuntimeEventPublisher(self.runtime_events)
@@ -332,26 +320,11 @@ class AgentLoop:
             consolidator=self.consolidator,
             session_ttl_minutes=session_ttl_minutes,
         )
-        self.dream = Dream(
-            store=self.context.memory,
-            provider=provider,
-            model=self.model,
-        )
         self.model_presets: dict[str, ModelPresetConfig] = model_presets or {}
         self._active_preset: str | None = None
         if model_preset:
             self.set_model_preset(model_preset, publish_update=False)
         self._register_default_tools()
-        from nanobot.agent.skill_evo.integration import SkillReviewTracker, create_review_service
-
-        review_svc = create_review_service(
-            provider,
-            self.model,
-            getattr(self, "_skill_store", None),
-            self.context.skills,
-            self.skills_config,
-        )
-        self._skill_tracker = SkillReviewTracker(self.skills_config, review_svc)
         self._runtime_vars: dict[str, Any] = {}
         self._current_iteration: int = 0
         self.commands = CommandRouter()
@@ -379,8 +352,6 @@ class AgentLoop:
         resolved = config.resolve_preset()
         model = extra.pop("model", None) or resolved.model
         context_window_tokens = extra.pop("context_window_tokens", None) or resolved.context_window_tokens
-        openviking_config = extra.pop("openviking_config", config.openviking)
-        skills_config = extra.pop("skills_config", defaults.skills)
         provider_snapshot_loader = extra.pop("provider_snapshot_loader", None)
         preset_snapshot_loader = extra.pop("preset_snapshot_loader", None) or preset_helpers.make_preset_snapshot_loader(
             config,
@@ -404,9 +375,6 @@ class AgentLoop:
             timezone=defaults.timezone,
             unified_session=defaults.unified_session,
             disabled_skills=defaults.disabled_skills,
-            skills_config=skills_config,
-            openviking_config=openviking_config,
-            full_config=config,
             session_ttl_minutes=defaults.session_ttl_minutes,
             consolidation_ratio=defaults.consolidation_ratio,
             max_messages=defaults.max_messages,
@@ -440,10 +408,6 @@ class AgentLoop:
         self.runner.provider = provider
         self.subagents.set_provider(provider, model)
         self.consolidator.set_provider(provider, model, context_window_tokens)
-        self.dream.set_provider(provider, model)
-        skill_tracker = getattr(self, "_skill_tracker", None)
-        if skill_tracker is not None:
-            skill_tracker.set_provider(provider, model)
         self._provider_signature = snapshot.signature
         if publish_update and self._runtime_model_publisher is not None:
             self._runtime_model_publisher(
@@ -531,98 +495,8 @@ class AgentLoop:
                 MyTool(runtime_state=self, modify_allowed=self.tools_config.my.allow_set)
             )
             registered.append("my")
-        register_platform_access_tools(self.tools)
-        registered.extend(
-            name
-            for name in ("query_data", "search_knowledge")
-            if name in self.tools.tool_names and name not in registered
-        )
 
         logger.info("Registered {} tools: {}", len(registered), registered)
-
-        from nanobot.agent.skill_evo.integration import register_skill_tools
-
-        self._skill_store = register_skill_tools(
-            self.tools,
-            self.context.skills,
-            self.workspace,
-            self.skills_config,
-        )
-
-        if self.openviking_config and self.openviking_config.enabled:
-            self._register_openviking_tools()
-
-    async def _ensure_viking_client(self) -> None:
-        """Lazily create VikingClient and inject it into context and tools."""
-        if self._viking_client_initialized:
-            return
-        self._viking_client_initialized = True
-        if not (self.openviking_config and self.openviking_config.enabled):
-            return
-        try:
-            from nanobot.openviking import HAS_OPENVIKING
-
-            if not HAS_OPENVIKING:
-                logger.warning("OpenViking enabled in config but package not installed")
-                return
-            from nanobot.openviking.client import VikingClient
-
-            client = await VikingClient.from_openviking_config(
-                self.openviking_config,
-                full_config=self._full_config,
-            )
-            max_commits = getattr(self.openviking_config, "max_concurrent_commits", 1)
-            client.set_max_concurrent_commits(max_commits)
-            self._viking_client = client
-            self.context.set_viking_client(client)
-
-            from nanobot.agent.tools.openviking import _OVTool
-
-            _OVTool._shared_client = client
-            logger.info("OpenViking client initialised (mode={})", self.openviking_config.mode)
-        except Exception:
-            logger.exception("Failed to initialise OpenViking client; continuing without it")
-
-    def _register_openviking_tools(self) -> None:
-        """Register OpenViking tools when enabled."""
-        try:
-            from nanobot.openviking import HAS_OPENVIKING
-
-            if not HAS_OPENVIKING:
-                logger.warning("OpenViking enabled in config but package not installed")
-                return
-            from nanobot.agent.tools.openviking import (
-                OVAddResourceTool,
-                OVGlobTool,
-                OVGrepTool,
-                OVListTool,
-                OVMemoryCommitTool,
-                OVReadTool,
-                OVSearchTool,
-                OVUserMemorySearchTool,
-            )
-
-            tool_classes = (
-                OVReadTool,
-                OVListTool,
-                OVSearchTool,
-                OVGrepTool,
-                OVGlobTool,
-                OVUserMemorySearchTool,
-                OVAddResourceTool,
-            )
-            for cls in tool_classes:
-                self.tools.register(cls(ov_config=self.openviking_config))
-            self.tools.register(
-                OVMemoryCommitTool(
-                    ov_config=self.openviking_config,
-                    session_key_fn=lambda: _CURRENT_OPENVIKING_SESSION_KEY.get(),
-                    background_task_scheduler=self._schedule_background,
-                )
-            )
-            logger.info("Registered {} OpenViking tools", len(tool_classes) + 1)
-        except Exception:
-            logger.exception("Failed to register OpenViking tools")
 
     async def _connect_mcp(self) -> None:
         """Connect configured MCP servers."""
@@ -713,28 +587,29 @@ class AgentLoop:
             return True
         return False
 
-    async def _build_initial_messages(
+    def _build_initial_messages(
         self,
         msg: InboundMessage,
         session: Session,
         history: list[dict[str, Any]],
         pending_summary: str | None,
+        include_memory_recent_history: bool = True,
     ) -> list[dict[str, Any]]:
         """Build the initial message list for the LLM turn."""
         scope = self.workspace_scopes.for_message(msg, session.metadata)
-        return await self.context.build_messages(
+        return self.context.build_messages(
             history=history,
             current_message=image_generation_prompt(msg.content, msg.metadata),
             media=msg.media if msg.media else None,
             channel=msg.channel,
             chat_id=self._runtime_chat_id(msg),
             sender_id=msg.sender_id,
-            sender_name=msg.metadata.get("sender_name"),
             session_summary=pending_summary,
             session_metadata=session.metadata,
             workspace=scope.project_path,
             runtime_state=self,
             inbound_message=msg,
+            include_memory_recent_history=include_memory_recent_history,
         )
 
     async def _dispatch_command_inline(
@@ -798,6 +673,8 @@ class AgentLoop:
         metadata: dict[str, Any] | None = None,
         session_key: str | None = None,
         pending_queue: asyncio.Queue | None = None,
+        ephemeral: bool = False,
+        tools: ToolRegistry | None = None,
     ) -> tuple[str | None, list[str], list[dict], str, bool]:
         """Run the agent iteration loop.
 
@@ -823,9 +700,9 @@ class AgentLoop:
             set_tool_context=self._set_tool_context,
             on_iteration=lambda iteration: setattr(self, "_current_iteration", iteration),
         )
-        hook: AgentHook = (
-            CompositeHook([loop_hook] + self._extra_hooks) if self._extra_hooks else loop_hook
-        )
+        hook: AgentHook = loop_hook
+        if not ephemeral and self._extra_hooks:
+            hook = CompositeHook([loop_hook] + self._extra_hooks)
 
         async def _checkpoint(payload: dict[str, Any]) -> None:
             if session is None:
@@ -897,7 +774,6 @@ class AgentLoop:
             metadata=dict(metadata or {}),
         )
         file_state_token = bind_file_states(self._file_state_store.for_session(active_session_key))
-        viking_session_token = _CURRENT_OPENVIKING_SESSION_KEY.set(active_session_key or "default")
         request_token = bind_request_context(request_ctx)
         workspace_token = bind_workspace_scope(effective_scope)
         # Build continuation message that embeds the active goal objective so
@@ -913,7 +789,7 @@ class AgentLoop:
         try:
             result = await self.runner.run(AgentRunSpec(
                 initial_messages=initial_messages,
-                tools=self.tools,
+                tools=tools or self.tools,
                 model=self.model,
                 max_iterations=self.max_iterations,
                 max_tool_result_chars=self.max_tool_result_chars,
@@ -942,7 +818,6 @@ class AgentLoop:
                 goal_continue_message=_goal_continue,
             ))
         finally:
-            _CURRENT_OPENVIKING_SESSION_KEY.reset(viking_session_token)
             reset_workspace_scope(workspace_token)
             reset_request_context(request_token)
             reset_file_states(file_state_token)
@@ -968,7 +843,6 @@ class AgentLoop:
         """Run the agent loop, dispatching messages as tasks to stay responsive to /stop."""
         self._running = True
         await self._connect_mcp()
-        await self._ensure_viking_client()
         logger.info("Agent loop started")
 
         while self._running:
@@ -1190,22 +1064,10 @@ class AgentLoop:
                 self._runtime_events().clear_turn(session_key)
 
     async def close_mcp(self) -> None:
-        """Drain pending background archives, then close OpenViking and MCP connections."""
+        """Drain pending background archives, then close MCP connections."""
         if self._background_tasks:
             await asyncio.gather(*self._background_tasks, return_exceptions=True)
             self._background_tasks.clear()
-        if self._viking_client is not None:
-            try:
-                await self._viking_client.aclose()
-            except Exception:
-                logger.debug("OpenViking cleanup error (can be ignored)")
-            finally:
-                self._viking_client = None
-                self.context._viking_client = None
-                with suppress(Exception):
-                    from nanobot.agent.tools.openviking import _OVTool
-
-                    _OVTool._shared_client = None
         for name, stack in self._mcp_stacks.items():
             try:
                 await stack.aclose()
@@ -1270,14 +1132,13 @@ class AgentLoop:
         current_role = "assistant" if is_subagent else "user"
         workspace_scope = self.workspace_scopes.for_message(msg, session.metadata)
 
-        messages = await self.context.build_messages(
+        messages = self.context.build_messages(
             history=history,
             current_message="" if is_subagent else msg.content,
             channel=channel,
             chat_id=chat_id,
             current_role=current_role,
             sender_id=msg.sender_id,
-            sender_name=msg.metadata.get("sender_name"),
             session_summary=pending,
             session_metadata=session.metadata,
             workspace=workspace_scope.project_path,
@@ -1327,6 +1188,8 @@ class AgentLoop:
         on_stream: Callable[[str], Awaitable[None]] | None = None,
         on_stream_end: Callable[..., Awaitable[None]] | None = None,
         pending_queue: asyncio.Queue | None = None,
+        ephemeral: bool = False,
+        tools: ToolRegistry | None = None,
     ) -> OutboundMessage | None:
         """Process a single inbound message and return the response."""
         self._refresh_provider_snapshot()
@@ -1357,6 +1220,8 @@ class AgentLoop:
             on_stream=on_stream,
             on_stream_end=on_stream_end,
             pending_queue=pending_queue,
+            ephemeral=ephemeral,
+            tools=tools,
         )
 
         while ctx.state is not TurnState.DONE:
@@ -1513,10 +1378,11 @@ class AgentLoop:
         return "dispatch"
 
     async def _state_build(self, ctx: TurnContext) -> str:
-        await self.consolidator.maybe_consolidate_by_tokens(
-            ctx.session,
-            replay_max_messages=self._max_messages,
-        )
+        if not ctx.ephemeral:
+            await self.consolidator.maybe_consolidate_by_tokens(
+                ctx.session,
+                replay_max_messages=self._max_messages,
+            )
         self._set_tool_context(
             ctx.msg.channel,
             ctx.msg.chat_id,
@@ -1539,11 +1405,12 @@ class AgentLoop:
             self.llm_runtime(),
         )
 
-        ctx.initial_messages = await self._build_initial_messages(
+        ctx.initial_messages = self._build_initial_messages(
             ctx.msg,
             ctx.session,
             ctx.history,
             ctx.pending_summary,
+            include_memory_recent_history=not ctx.ephemeral,
         )
         ctx.user_persisted_early = self._persist_user_message_early(
             ctx.msg, ctx.session
@@ -1578,6 +1445,8 @@ class AgentLoop:
             metadata=ctx.msg.metadata,
             session_key=ctx.session_key,
             pending_queue=ctx.pending_queue,
+            ephemeral=ctx.ephemeral,
+            tools=ctx.tools,
         )
         final_content, tools_used, all_msgs, stop_reason, had_injections = result
         ctx.final_content = final_content
@@ -1585,17 +1454,6 @@ class AgentLoop:
         ctx.all_messages = all_msgs
         ctx.stop_reason = stop_reason
         ctx.had_injections = had_injections
-        if self._skill_tracker.active:
-            self._schedule_background(
-                self._skill_tracker.maybe_review(
-                    all_msgs,
-                    ctx.session_key,
-                    set(tools_used) if tools_used else set(),
-                    bus=self.bus,
-                    channel=ctx.msg.channel,
-                    chat_id=ctx.msg.chat_id,
-                )
-            )
         await turn_continuation.maybe_continue_turn(ctx)
         return "ok"
 
@@ -1623,16 +1481,17 @@ class AgentLoop:
             ctx.session_key,
             ctx.turn_latency_ms,
         )
-        ctx.session.enforce_file_cap(on_archive=self.context.memory.raw_archive)
+        if not ctx.ephemeral:
+            ctx.session.enforce_file_cap(on_archive=self.context.memory.raw_archive)
+            self._schedule_background(
+                self.consolidator.maybe_consolidate_by_tokens(
+                    ctx.session,
+                    replay_max_messages=self._max_messages,
+                )
+            )
         self._clear_pending_user_turn(ctx.session)
         self._clear_runtime_checkpoint(ctx.session)
         self.sessions.save(ctx.session)
-        self._schedule_background(
-            self.consolidator.maybe_consolidate_by_tokens(
-                ctx.session,
-                replay_max_messages=self._max_messages,
-            )
-        )
         return "ok"
 
     async def _state_respond(self, ctx: TurnContext) -> str:
@@ -1648,6 +1507,8 @@ class AgentLoop:
             ctx.on_stream,
             turn_latency_ms=ctx.turn_latency_ms,
         )
+        if ctx.ephemeral and ctx.outbound is not None:
+            ctx.outbound.metadata["_stop_reason"] = ctx.stop_reason
         return "ok"
 
     def _sanitize_persisted_blocks(
@@ -1872,10 +1733,11 @@ class AgentLoop:
         on_progress: Callable[..., Awaitable[None]] | None = None,
         on_stream: Callable[[str], Awaitable[None]] | None = None,
         on_stream_end: Callable[..., Awaitable[None]] | None = None,
+        ephemeral: bool = False,
+        tools: ToolRegistry | None = None,
     ) -> OutboundMessage | None:
         """Process a message directly and return the outbound payload."""
         await self._connect_mcp()
-        await self._ensure_viking_client()
         msg = InboundMessage(
             channel=channel, sender_id="user", chat_id=chat_id,
             content=content, media=media or [],
@@ -1884,12 +1746,18 @@ class AgentLoop:
         lock = self._session_locks.setdefault(session_key, asyncio.Lock())
         try:
             async with lock:
+                kwargs: dict[str, Any] = {
+                    "session_key": session_key,
+                    "on_progress": on_progress,
+                    "on_stream": on_stream,
+                    "on_stream_end": on_stream_end,
+                    "ephemeral": ephemeral,
+                }
+                if tools is not None:
+                    kwargs["tools"] = tools
                 return await self._process_message(
                     msg,
-                    session_key=session_key,
-                    on_progress=on_progress,
-                    on_stream=on_stream,
-                    on_stream_end=on_stream_end,
+                    **kwargs,
                 )
         finally:
             await self._runtime_events().run_status_changed(msg, session_key, "idle")

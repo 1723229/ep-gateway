@@ -61,7 +61,6 @@ def test_model_preset_setter_updates_state(tmp_path) -> None:
     assert loop.consolidator.model == "openai/gpt-4.1"
     assert loop.consolidator.context_window_tokens == 32_768
     assert loop.consolidator.max_completion_tokens == 4096
-    assert loop.dream.model == "openai/gpt-4.1"
 
 
 def test_model_preset_setter_calls_runtime_model_publisher(tmp_path) -> None:
@@ -112,44 +111,9 @@ def test_model_preset_setter_replaces_provider_from_snapshot(tmp_path) -> None:
     assert loop.subagents.provider is new_provider
     assert loop.subagents.runner.provider is new_provider
     assert loop.consolidator.provider is new_provider
-    assert loop.dream.provider is new_provider
-    assert loop.dream._runner.provider is new_provider
-    assert loop._skill_tracker._review._provider is new_provider
-    assert loop._skill_tracker._review._model == "anthropic/claude-opus-4-5"
     assert loop.model == "anthropic/claude-opus-4-5"
     assert loop.context_window_tokens == 200_000
     assert loop.consolidator.max_completion_tokens == 2048
-
-
-def test_model_preset_updates_skill_review_provider_when_enabled(tmp_path) -> None:
-    old_provider = _provider("base-model", max_tokens=123)
-    new_provider = _provider("openai/gpt-4.1", max_tokens=2048)
-    preset = ModelPresetConfig(
-        model="openai/gpt-4.1",
-        provider="openai",
-        max_tokens=2048,
-        context_window_tokens=32_000,
-    )
-    loop = AgentLoop(
-        bus=MessageBus(),
-        provider=old_provider,
-        workspace=tmp_path,
-        model="base-model",
-        context_window_tokens=1000,
-        model_presets={"fast": preset},
-        preset_snapshot_loader=lambda name: ProviderSnapshot(
-            provider=new_provider,
-            model=preset.model,
-            context_window_tokens=preset.context_window_tokens,
-            signature=(name, preset.model),
-        ),
-    )
-    review = MagicMock()
-    loop._skill_tracker._review = review
-
-    loop.set_model_preset("fast")
-
-    review.set_provider.assert_called_once_with(new_provider, "openai/gpt-4.1")
 
 
 def test_model_preset_setter_failure_leaves_old_state(tmp_path) -> None:
@@ -173,7 +137,6 @@ def test_model_preset_setter_failure_leaves_old_state(tmp_path) -> None:
     assert loop.model == "base-model"
     assert loop.subagents.model == "base-model"
     assert loop.consolidator.model == "base-model"
-    assert loop.dream.model == "base-model"
     assert loop.context_window_tokens == 1000
     assert loop.consolidator.max_completion_tokens == 123
 
