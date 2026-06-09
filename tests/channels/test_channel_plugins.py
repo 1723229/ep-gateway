@@ -974,7 +974,7 @@ class _StartableChannel(BaseChannel):
 
 @pytest.mark.asyncio
 async def test_validate_allow_from_allows_empty_list():
-    """Empty allow_from is valid now — pairing store handles unapproved senders."""
+    """Empty allow_from is valid and allows all senders."""
     fake_config = SimpleNamespace(
         channels=ChannelsConfig(),
         providers=SimpleNamespace(groq=SimpleNamespace(api_key="")),
@@ -985,7 +985,7 @@ async def test_validate_allow_from_allows_empty_list():
     mgr.channels = {"test": _ChannelWithAllowFrom(fake_config, None, [])}
     mgr._dispatch_task = None
 
-    # Should not raise — empty list defers to pairing store
+    # Should not raise — empty list means open access
     mgr._validate_allow_from()
     assert list(mgr.channels) == ["test"]
     assert mgr.channels["test"].config.allow_from == []
@@ -1012,7 +1012,7 @@ async def test_validate_allow_from_passes_with_asterisk():
 
 @pytest.mark.asyncio
 async def test_validate_allow_from_allows_empty_dict_allow_from():
-    """Empty dict-backed allow_from is valid — pairing store handles approval."""
+    """Empty dict-backed allow_from is valid and allows all senders."""
     fake_config = SimpleNamespace(
         channels=ChannelsConfig(),
         providers=SimpleNamespace(groq=SimpleNamespace(api_key="")),
@@ -1030,7 +1030,7 @@ async def test_validate_allow_from_allows_empty_dict_allow_from():
 
 @pytest.mark.asyncio
 async def test_validate_allow_from_allows_missing_allow_from():
-    """Omitted allowFrom is valid — channel operates in pairing-only mode."""
+    """Omitted allowFrom is valid and allows all senders."""
     fake_config = SimpleNamespace(
         channels=ChannelsConfig(),
         providers=SimpleNamespace(groq=SimpleNamespace(api_key="")),
@@ -1054,7 +1054,7 @@ async def test_validate_allow_from_allows_missing_allow_from():
     mgr.channels = {"test": _NoAllowFromChannel({"enabled": True}, None)}
     mgr._dispatch_task = None
 
-    # Should not raise — pairing-only mode
+    # Should not raise — omitted allowFrom means open access
     mgr._validate_allow_from()
     assert list(mgr.channels) == ["test"]
     assert "allow_from" not in mgr.channels["test"].config

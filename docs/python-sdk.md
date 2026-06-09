@@ -19,7 +19,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-`Nanobot.from_config()` reuses your normal `~/.nanobot/config.json`, so the SDK follows the same provider, model, tools, and workspace defaults as the CLI unless you override them.
+`Nanobot.from_config()` reuses your normal `~/.hiperone/config.json`, so the SDK follows the same provider, model, tools, and workspace defaults as the CLI unless you override them.
 
 Use `async with` when possible so MCP connections and background cleanup work are closed before the event loop exits. If you manage the instance manually, call `await bot.aclose()` in a `finally` block.
 
@@ -31,7 +31,7 @@ Use `async with` when possible so MCP connections and background cleanup work ar
 from nanobot import Nanobot
 
 bot = Nanobot.from_config(
-    config_path="~/.nanobot/config.json",
+    config_path="~/.hiperone/config.json",
     workspace="/my/project",
 )
 ```
@@ -70,7 +70,7 @@ Create a `Nanobot` instance from a config file.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `config_path` | `str \| Path \| None` | `None` | Path to `config.json`. Defaults to `~/.nanobot/config.json`. |
+| `config_path` | `str \| Path \| None` | `None` | Path to `config.json`. Defaults to `~/.hiperone/config.json`. |
 | `workspace` | `str \| Path \| None` | `None` | Override the workspace directory from config. |
 
 Raises `FileNotFoundError` if an explicit config path does not exist.

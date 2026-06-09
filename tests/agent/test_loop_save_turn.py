@@ -8,6 +8,7 @@ from nanobot.agent.context import ContextBuilder
 from nanobot.agent.loop import AgentLoop
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
+from nanobot.config.schema import Config
 from nanobot.providers.base import LLMResponse
 from nanobot.session.goal_state import GOAL_STATE_KEY
 from nanobot.session.manager import Session, SessionManager
@@ -67,6 +68,24 @@ def test_agent_loop_llm_runtime_reflects_current_provider_and_model(tmp_path: Pa
 def test_clean_generated_title_strips_reasoning_tags() -> None:
     assert clean_generated_title("<think>reasoning</think> WebUI polish") == "WebUI polish"
     assert clean_generated_title("Title: <think> The user said hello") == ""
+
+
+def test_config_ignores_stale_semantic_memory_key(tmp_path: Path) -> None:
+    stale_key = "open" + "viking"
+    config = Config.model_validate(
+        {
+            "agents": {"defaults": {"workspace": str(tmp_path)}},
+            stale_key: {
+                "enabled": True,
+                "mode": "remote",
+                "serverUrl": "https://viking.example.com",
+                "embeddingModel": "openai/text-embedding-3-large",
+            },
+        }
+    )
+
+    assert config.agents.defaults.workspace == str(tmp_path)
+    assert not hasattr(config, stale_key)
 
 
 @pytest.mark.asyncio
@@ -1180,6 +1199,7 @@ def test_prompt_merge_does_not_replace_standalone_subagent_history_entry(tmp_pat
     non_system = [m for m in projected if m.get("role") != "system"]
     assert len(non_system) == 2
     assert "subagent result" in non_system[-1]["content"]
+    assert non_system[0]["content"] == "previous assistant"
     assert session.messages[-1]["content"] == "subagent result"
     assert session.messages[-1]["injected_event"] == "subagent_result"
 

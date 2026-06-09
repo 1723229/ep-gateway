@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import datetime as datetime_module
 import re
 from datetime import datetime as real_datetime
 from importlib.resources import files as pkg_files
 from pathlib import Path
-import datetime as datetime_module
 
 from nanobot.agent.context import ContextBuilder
 
@@ -201,7 +201,6 @@ def test_partial_dream_processing_shows_only_remainder(tmp_path) -> None:
     workspace = _make_workspace(tmp_path)
     builder = ContextBuilder(workspace)
 
-    c1 = builder.memory.append_history("old conversation about Python")
     c2 = builder.memory.append_history("old conversation about Rust")
     builder.memory.append_history("recent question about Docker")
     builder.memory.append_history("recent question about K8s")
@@ -279,6 +278,16 @@ def test_channel_format_hint_whatsapp(tmp_path) -> None:
     prompt = builder.build_system_prompt(channel="whatsapp")
     assert "Format Hint" in prompt
     assert "plain text only" in prompt
+
+
+def test_channel_hint_feishu(tmp_path) -> None:
+    """Feishu should expose Lark/Feishu skills without generic format hints."""
+    workspace = _make_workspace(tmp_path)
+    builder = ContextBuilder(workspace)
+
+    prompt = builder.build_system_prompt(channel="feishu")
+    assert "Format Hint" not in prompt
+    assert "lark-cli" in prompt
 
 
 def test_channel_format_hint_absent_for_unknown(tmp_path) -> None:

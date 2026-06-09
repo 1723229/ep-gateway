@@ -137,7 +137,7 @@ class TestRestartCommand:
                 pass
 
             mock_dispatch.assert_not_called()
-            assert "nanobot" in out.content.lower() or "Model" in out.content
+            assert "hiperone" in out.content.lower() or "Model" in out.content
 
     @pytest.mark.asyncio
     async def test_run_propagates_external_cancellation(self):

@@ -57,7 +57,12 @@ class ContextBuilder:
     _MAX_HISTORY_CHARS = 32_000  # hard cap on recent history section size
     _RUNTIME_CONTEXT_END = "[/Runtime Context]"
 
-    def __init__(self, workspace: Path, timezone: str | None = None, disabled_skills: list[str] | None = None):
+    def __init__(
+        self,
+        workspace: Path,
+        timezone: str | None = None,
+        disabled_skills: list[str] | None = None,
+    ):
         self.workspace = workspace
         self.timezone = timezone
         self.memory = MemoryStore(workspace)
@@ -85,13 +90,13 @@ class ContextBuilder:
         if memory and not self._is_template_content(self.memory.read_memory(), "memory/MEMORY.md"):
             parts.append(f"# Memory\n\n{memory}")
 
-        always_skills = self.skills.get_always_skills()
+        always_skills = self.skills.get_always_skills(channel=channel)
         if always_skills:
             always_content = self.skills.load_skills_for_context(always_skills)
             if always_content:
                 parts.append(f"# Active Skills\n\n{always_content}")
 
-        skills_summary = self.skills.build_skills_summary(exclude=set(always_skills))
+        skills_summary = self.skills.build_skills_summary(exclude=set(always_skills), channel=channel)
         if skills_summary:
             parts.append(render_template("agent/skills_section.md", skills_summary=skills_summary))
 
@@ -131,6 +136,7 @@ class ContextBuilder:
         chat_id: str | None,
         timezone: str | None = None,
         sender_id: str | None = None,
+        sender_name: str | None = None,
         supplemental_lines: Sequence[str] | None = None,
     ) -> str:
         """Build untrusted runtime metadata block appended after user content."""
@@ -139,6 +145,8 @@ class ContextBuilder:
             lines += [f"Channel: {channel}", f"Chat ID: {chat_id}"]
         if sender_id:
             lines += [f"Sender ID: {sender_id}"]
+        if sender_name:
+            lines += [f"Sender Name: {sender_name}"]
         if supplemental_lines:
             lines.extend(supplemental_lines)
         return ContextBuilder._RUNTIME_CONTEXT_TAG + "\n" + "\n".join(lines) + "\n" + ContextBuilder._RUNTIME_CONTEXT_END
@@ -188,6 +196,7 @@ class ContextBuilder:
         chat_id: str | None = None,
         current_role: str = "user",
         sender_id: str | None = None,
+        sender_name: str | None = None,
         session_summary: str | None = None,
         session_metadata: Mapping[str, Any] | None = None,
         current_runtime_lines: Sequence[str] | None = None,
@@ -211,6 +220,7 @@ class ContextBuilder:
             chat_id,
             self.timezone,
             sender_id=sender_id,
+            sender_name=sender_name,
             supplemental_lines=extra or None,
         )
         user_content = self._build_user_content(current_message, media)
@@ -223,17 +233,15 @@ class ContextBuilder:
             merged = f"{user_content}\n\n{runtime_ctx}"
         else:
             merged = user_content + [{"type": "text", "text": runtime_ctx}]
+        system_prompt = self.build_system_prompt(
+            skill_names,
+            channel=channel,
+            session_summary=session_summary,
+            workspace=root,
+            include_memory_recent_history=include_memory_recent_history,
+        )
         messages = [
-            {
-                "role": "system",
-                "content": self.build_system_prompt(
-                    skill_names,
-                    channel=channel,
-                    session_summary=session_summary,
-                    workspace=root,
-                    include_memory_recent_history=include_memory_recent_history,
-                ),
-            },
+            {"role": "system", "content": system_prompt},
             *history,
         ]
         if messages[-1].get("role") == current_role:

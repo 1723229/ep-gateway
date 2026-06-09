@@ -587,7 +587,7 @@ class AgentLoop:
             return True
         return False
 
-    def _build_initial_messages(
+    async def _build_initial_messages(
         self,
         msg: InboundMessage,
         session: Session,
@@ -1405,7 +1405,7 @@ class AgentLoop:
             self.llm_runtime(),
         )
 
-        ctx.initial_messages = self._build_initial_messages(
+        ctx.initial_messages = await self._build_initial_messages(
             ctx.msg,
             ctx.session,
             ctx.history,
