@@ -166,7 +166,7 @@ class TestAgentLoopTTLParam:
         loop = _make_loop(tmp_path)
         session = loop.sessions.get_or_create("cli:direct")
         session.get_history = MagicMock(return_value=[])
-        loop.context.build_messages = AsyncMock(return_value=[])
+        loop.context.build_messages = MagicMock(return_value=[])
         loop._run_agent_loop = AsyncMock(return_value=("ok", [], [], "stop", False))
         loop._save_turn = MagicMock()
 

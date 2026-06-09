@@ -27,7 +27,6 @@ from nanobot.command.router import CommandContext, CommandRouter
 from nanobot.config.schema import AgentDefaults, Config
 from nanobot.session.manager import Session, SessionManager
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -39,8 +38,8 @@ def _make_loop(tmp_path: Path, unified_session: bool = False) -> AgentLoop:
     provider.get_default_model.return_value = "test-model"
 
     with patch("nanobot.agent.loop.SessionManager"), \
-         patch("nanobot.agent.loop.SubagentManager") as MockSubMgr:
-        MockSubMgr.return_value.cancel_by_session = AsyncMock(return_value=0)
+         patch("nanobot.agent.loop.SubagentManager") as mock_sub_mgr:
+        mock_sub_mgr.return_value.cancel_by_session = AsyncMock(return_value=0)
         loop = AgentLoop(
             bus=bus,
             provider=provider,
@@ -316,7 +315,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
             model="test-model",
             sessions=sessions,
             context_window_tokens=1000,
-            build_messages=AsyncMock(return_value=[]),
+            build_messages=MagicMock(return_value=[]),
             get_tool_definitions=MagicMock(return_value=[]),
             max_completion_tokens=100,
         )
@@ -349,7 +348,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
                 model="test-model",
                 sessions=sessions,
                 context_window_tokens=1000,
-                build_messages=AsyncMock(return_value=[]),
+                build_messages=MagicMock(return_value=[]),
                 get_tool_definitions=MagicMock(return_value=[]),
                 max_completion_tokens=100,
             )
@@ -379,7 +378,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
             model="test-model",
             sessions=sessions,
             context_window_tokens=1000,
-            build_messages=AsyncMock(return_value=[]),
+            build_messages=MagicMock(return_value=[]),
             get_tool_definitions=MagicMock(return_value=[]),
             max_completion_tokens=100,
         )
@@ -389,7 +388,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
         sessions.get_or_create.return_value = session
 
         # Simulate over-budget: estimated > budget
-        consolidator.estimate_session_prompt_tokens = AsyncMock(return_value=(950, "tiktoken"))
+        consolidator.estimate_session_prompt_tokens = MagicMock(return_value=(950, "tiktoken"))
         # No valid boundary found → returns gracefully without archiving
         consolidator.pick_consolidation_boundary = MagicMock(return_value=None)
         consolidator.archive = AsyncMock()
@@ -397,7 +396,7 @@ class TestConsolidationUnaffectedByUnifiedSession:
         await consolidator.maybe_consolidate_by_tokens(session)
 
         # estimate was called (consolidation was attempted)
-        consolidator.estimate_session_prompt_tokens.assert_awaited_once_with(
+        consolidator.estimate_session_prompt_tokens.assert_called_once_with(
             session,
         )
         # but archive was not called (no valid boundary)
@@ -418,7 +417,7 @@ class TestStopCommandWithUnifiedSession:
         from nanobot.agent.loop import UNIFIED_SESSION_KEY
 
         loop = _make_loop(tmp_path, unified_session=True)
-        
+
         # Create a message from telegram channel
         msg = _make_msg(channel="telegram", chat_id="123456")
 

@@ -182,27 +182,6 @@ class AgentsConfig(Base):
     defaults: AgentDefaults = Field(default_factory=AgentDefaults)
 
 
-class OpenVikingConfig(Base):
-    """OpenViking semantic memory configuration."""
-
-    enabled: bool = False
-    mode: str = "local"  # "local" (embedded) or "remote" (HTTP server)
-    server_url: str = ""
-    account_id: str = ""
-    user_id: str = ""
-    api_key: str = ""
-    data_dir: str = "~/.hiperone/openviking"
-    vlm_api_key: str = ""
-    vlm_base_url: str = ""
-    vlm_model: str = ""
-    embedding_model: str = ""
-    embedding_api_key: str = ""
-    embedding_base_url: str = ""
-    embedding_dimension: int = 1024
-    max_concurrent_commits: int = 1
-    memory_recall_limit: int = 5
-
-
 class AdminConfig(Base):
     """Standalone admin HTTP channel configuration."""
 
@@ -368,7 +347,6 @@ class Config(BaseSettings):
     api: ApiConfig = Field(default_factory=ApiConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
-    openviking: OpenVikingConfig = Field(default_factory=OpenVikingConfig)
     model_presets: dict[str, ModelPresetConfig] = Field(
         default_factory=dict,
         validation_alias=AliasChoices("modelPresets", "model_presets"),
@@ -530,7 +508,7 @@ class Config(BaseSettings):
                 return spec.default_api_base
         return None
 
-    model_config = ConfigDict(env_prefix="NANOBOT_", env_nested_delimiter="__")
+    model_config = ConfigDict(env_prefix="NANOBOT_", env_nested_delimiter="__", extra="ignore")
 
 
 def _resolve_tool_config_refs() -> None:

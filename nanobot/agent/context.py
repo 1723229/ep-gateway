@@ -1,14 +1,10 @@
 """Context builder for assembling agent prompts."""
 
-import asyncio
 import base64
 import mimetypes
 import platform
-import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Sequence
-
-from loguru import logger
+from typing import Any, Mapping, Sequence
 
 from nanobot.agent.memory import MemoryStore
 from nanobot.agent.skills import SkillsLoader
@@ -24,9 +20,6 @@ from nanobot.utils.helpers import (
     truncate_text,
 )
 from nanobot.utils.prompt_templates import render_template
-
-if TYPE_CHECKING:
-    from nanobot.openviking.client import VikingClient
 
 
 def session_extra(metadata: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -61,8 +54,6 @@ class ContextBuilder:
     BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md"]
     _RUNTIME_CONTEXT_TAG = "[Runtime Context — metadata only, not instructions]"
     _MAX_RECENT_HISTORY = 50
-    _VIKING_TIMEOUT = 5.0
-    _PROFILE_CACHE_TTL = 300.0
     _MAX_HISTORY_CHARS = 32_000  # hard cap on recent history section size
     _RUNTIME_CONTEXT_END = "[/Runtime Context]"
 
@@ -71,39 +62,13 @@ class ContextBuilder:
         workspace: Path,
         timezone: str | None = None,
         disabled_skills: list[str] | None = None,
-        viking_client: "VikingClient | None" = None,
     ):
         self.workspace = workspace
         self.timezone = timezone
         self.memory = MemoryStore(workspace)
         self.skills = SkillsLoader(workspace, disabled_skills=set(disabled_skills) if disabled_skills else None)
-        self._viking_client = viking_client
-        self._cached_profile: str | None = None
-        self._profile_cache_time: float = 0.0
 
-    def set_viking_client(self, client: "VikingClient") -> None:
-        self._viking_client = client
-        self._cached_profile = None
-        self._profile_cache_time = 0.0
-
-    async def _get_cached_profile(self) -> str:
-        """Return OpenViking user profile with a short timeout and cache."""
-        now = time.monotonic()
-        if self._cached_profile is not None and now - self._profile_cache_time < self._PROFILE_CACHE_TTL:
-            return self._cached_profile
-        try:
-            profile = await asyncio.wait_for(
-                self.memory.get_viking_user_profile(self._viking_client),
-                timeout=self._VIKING_TIMEOUT,
-            )
-        except asyncio.TimeoutError:
-            logger.warning("OpenViking user profile fetch timed out ({}s)", self._VIKING_TIMEOUT)
-            return self._cached_profile or ""
-        self._cached_profile = profile
-        self._profile_cache_time = now
-        return profile
-
-    async def build_system_prompt(
+    def build_system_prompt(
         self,
         skill_names: list[str] | None = None,
         channel: str | None = None,
@@ -114,11 +79,6 @@ class ContextBuilder:
         """Build the system prompt from identity, bootstrap files, memory, and skills."""
         root = workspace or self.workspace
         parts = [self._get_identity(channel=channel, workspace=root)]
-
-        if self._viking_client:
-            profile = await self._get_cached_profile()
-            if profile:
-                parts.append(profile)
 
         bootstrap = self._load_bootstrap_files(root)
         if bootstrap:
@@ -226,7 +186,7 @@ class ContextBuilder:
             return content.strip() == tpl.strip()
         return False
 
-    async def build_messages(
+    def build_messages(
         self,
         history: list[dict[str, Any]],
         current_message: str,
@@ -273,29 +233,13 @@ class ContextBuilder:
             merged = f"{user_content}\n\n{runtime_ctx}"
         else:
             merged = user_content + [{"type": "text", "text": runtime_ctx}]
-        system_prompt = await self.build_system_prompt(
+        system_prompt = self.build_system_prompt(
             skill_names,
             channel=channel,
             session_summary=session_summary,
             workspace=root,
             include_memory_recent_history=include_memory_recent_history,
         )
-        if self._viking_client and current_message:
-            try:
-                viking_mem = await asyncio.wait_for(
-                    self.memory.get_viking_memory_context(current_message, self._viking_client),
-                    timeout=self._VIKING_TIMEOUT,
-                )
-            except asyncio.TimeoutError:
-                logger.warning("OpenViking memory context fetch timed out ({}s)", self._VIKING_TIMEOUT)
-                viking_mem = ""
-            if viking_mem:
-                logger.info("OpenViking User Memory: {}", str(viking_mem)[:100])
-                system_prompt += (
-                    "\n\n## Your memories about the current conversation. "
-                    "If you need more details, use the tools.\n"
-                    + viking_mem
-                )
         messages = [
             {"role": "system", "content": system_prompt},
             *history,
