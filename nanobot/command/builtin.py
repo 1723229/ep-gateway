@@ -99,6 +99,12 @@ BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (
         "undo-2",
     ),
     BuiltinCommandSpec(
+        "/skill",
+        "List skills",
+        "List all enabled skills available to the agent.",
+        "wrench",
+    ),
+    BuiltinCommandSpec(
         "/help",
         "Show help",
         "List available slash commands.",
@@ -346,6 +352,13 @@ async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
             elapsed = time.monotonic() - t0
             content = f"Dream failed after {elapsed:.1f}s: {e}"
         finally:
+            from nanobot.webui.token_usage import record_response_token_usage
+
+            record_response_token_usage(
+                resp,
+                source="dream",
+                timezone_name=getattr(loop.context, "timezone", None),
+            )
             if store.git.is_initialized():
                 commit_msg = build_dream_commit_message("dream: manual run", resp)
                 sha = store.git.auto_commit(commit_msg)
@@ -644,6 +657,25 @@ async def cmd_pairing(ctx: CommandContext) -> OutboundMessage:
     )
 
 
+async def cmd_skill(ctx: CommandContext) -> OutboundMessage:
+    """List all enabled skills (name and description only)."""
+    loop = ctx.loop
+    skills = loop.context.skills.list_skills(filter_unavailable=False)
+    if not skills:
+        content = "No skills available."
+    else:
+        lines = [f"Available skills ({len(skills)}):", ""]
+        for entry in skills:
+            desc = loop.context.skills._get_skill_description(entry["name"])
+            lines.append(f"- **{entry['name']}** — {desc}")
+        content = "\n".join(lines)
+    return OutboundMessage(
+        channel=ctx.msg.channel,
+        chat_id=ctx.msg.chat_id,
+        content=content,
+        metadata=dict(ctx.msg.metadata or {}),
+    )
+
 async def cmd_help(ctx: CommandContext) -> OutboundMessage:
     """Return available slash commands."""
     return OutboundMessage(
@@ -683,6 +715,7 @@ def register_builtin_commands(router: CommandRouter) -> None:
     router.prefix("/dream-log ", cmd_dream_log)
     router.exact("/dream-restore", cmd_dream_restore)
     router.prefix("/dream-restore ", cmd_dream_restore)
+    router.exact("/skill", cmd_skill)
     router.exact("/help", cmd_help)
     router.exact("/pairing", cmd_pairing)
     router.prefix("/pairing ", cmd_pairing)
